@@ -4,7 +4,6 @@ import pathlib
 import json
 
 import matplotlib.pyplot as plt
-from black import out
 import numpy as np
 import pandas as pd
 
@@ -13,6 +12,12 @@ import dipy.io
 import dipy.core.gradients
 import dipy.reconst.dti
 import dipy.segment.mask
+
+# TODO turn these into command line parsed args
+# Options for whether to force recomputing things when the associated file already exists
+recompute_mask = False
+recompute_dti = False
+recompute_fa = False
 
 # Define source image and output locations
 data_dir = '/home/ebrahim/data/abcd/DMRI_extracted'
@@ -60,22 +65,38 @@ for d in data:
     gtab = dipy.core.gradients.gradient_table(bvals, bvecs)
 
     # Use median Otsu method for masking to the brain region
-    img_data_masked, mask = dipy.segment.mask.median_otsu(img_data, vol_idx = range(img_data.shape[-1]))
+    mask_path = os.path.join(output_dir_brainmask,f'{output_file_basename}.nii.gz')
+    if recompute_mask or not os.path.exists(mask_path):
+        img_data_masked, mask = dipy.segment.mask.median_otsu(img_data, vol_idx = range(img_data.shape[-1]))
+        dipy.io.image.save_nifti(mask_path, mask.astype(np.float32), affine)
+    else:
+        mask_loaded, mask_loaded_affine = dipy.io.image.load_nifti(mask_path)
+        assert((mask_loaded_affine == affine).all())
+        img_data_masked = img_data * np.repeat(mask_loaded[:,:,:,np.newaxis], img_data.shape[-1], axis=-1)
 
     # Fit tensor model
-    tensor_model = dipy.reconst.dti.TensorModel(gtab)
-    tensor_fit = tensor_model.fit(img_data_masked)
+    lt_path = os.path.join(output_dir_dti,f'{output_file_basename}.nii.gz')
+    if recompute_dti or not os.path.exists(lt_path):
+        tensor_model = dipy.reconst.dti.TensorModel(gtab)
+        tensor_fit = tensor_model.fit(img_data_masked)
+        lt = tensor_fit.lower_triangular()
+        dipy.io.image.save_nifti(lt_path, lt, affine)
+        eigvals = tensor_fit.evals
+    else:
+        lt, lt_affine = dipy.io.image.load_nifti(lt_path)
+        assert((lt_affine == affine).all())
+        eig = dipy.reconst.dti.eig_from_lo_tri(lt) # has eigenvals and eigenvecs
+        eigvals = eig[:,:,:,:3] # take only the eigenvals
 
-    # Save the lower triangular part,
-    # i.e. the unique elements of the diffusion tensor in the order Dxx, Dxy, Dyy, Dxz, Dyz, Dzz
-    lt = tensor_fit.lower_triangular()
-    dipy.io.image.save_nifti(os.path.join(output_dir_dti,f'{output_file_basename}.nii.gz'), lt, affine)
 
-    # Get the FA image
-    fa = dipy.reconst.dti.fractional_anisotropy(tensor_fit.evals)
-
-    # Save the FA image
-    dipy.io.image.save_nifti(os.path.join(output_dir_fa,f'{output_file_basename}.nii.gz'), fa, affine)
+    # Compute the FA image
+    fa_path = os.path.join(output_dir_fa,f'{output_file_basename}.nii.gz')
+    if recompute_fa or not os.path.exists(fa_path):
+        fa = dipy.reconst.dti.fractional_anisotropy(eigvals)
+        dipy.io.image.save_nifti(fa_path, fa, affine)
+    else:
+        fa, fa_affine = dipy.io.image.load_nifti(fa_path)
+        assert((fa_affine == affine).all())
 
     # Point out if there are NaNs
     num_nans = np.isnan(fa).sum()
