@@ -1,7 +1,7 @@
 import os
 import glob
 import pathlib
-import json
+import multiprocessing as mp
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +14,7 @@ import dipy.reconst.dti
 import dipy.segment.mask
 
 # TODO turn these into command line parsed args
+num_parallel = mp.cpu_count()
 # Options for whether to force recomputing things when the associated file already exists
 recompute_mask = False
 recompute_dti = False
@@ -53,11 +54,13 @@ for _,row in sampled_fmriresults01_df.iterrows():
         'interview_age' : row.interview_age
     })
 
-# TODO: deal with the bathroom break kids
+# TODO: adjust the data list building to deal with the bathroom break kids
 
-for d in data:
+def process_data_item(d):
 
     output_file_basename = f"{d['subjectkey']}-{d['interview_age']}"
+
+    print(f"Processing {output_file_basename}...")
 
     # Load the diffusion weighted dataset
     img_data, affine = dipy.io.image.load_nifti(d['dwi_path'])
@@ -109,4 +112,7 @@ for d in data:
     axs[1].imshow(fa[:,:,80].T, origin='lower', cmap='gray')
     plt.savefig(os.path.join(output_dir_fa_preview, f'{output_file_basename}.png'))
 
-    break
+
+print(f"There are {len(data)} diffusion weighted datasets to process; running {num_parallel} processes in parallel.")
+with mp.Pool(num_parallel) as p:
+    p.map(process_data_item,data)
