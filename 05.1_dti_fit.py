@@ -38,23 +38,48 @@ sampled_fmriresults01_df = pd.read_csv('01.0_abcd_sample/sampled_fmriresults01.c
 sampled_fmriresults01_df['dirname'] = sampled_fmriresults01_df.derived_files.apply(lambda x : x.split('/')[-1].strip('.tgz'))
 dirname_to_full_path = {img_dir.split('/')[-5]:img_dir for img_dir in img_dirs}
 data = []
-for _,row in sampled_fmriresults01_df.iterrows():
-    if row.dirname not in dirname_to_full_path.keys():
-        raise FileNotFoundError(f"Could not find a directory for fmriresults01 id {row.fmriresults01_id}")
-    img_dir = dirname_to_full_path[row.dirname]
-    dwi_path = glob.glob(os.path.join(img_dir, '*.nii'))[0]
-    bval_path = glob.glob(os.path.join(img_dir, '*.bval'))[0]
-    bvec_path = glob.glob(os.path.join(img_dir, '*.bvec'))[0]
+for (subjectkey,interview_age),df in sampled_fmriresults01_df.groupby(['subjectkey', 'interview_age']):
+    paths = []
+    for _,row in df.iterrows():
+        if row.dirname not in dirname_to_full_path.keys():
+            raise FileNotFoundError(f"Could not find a directory for fmriresults01 id {row.fmriresults01_id}")
+        img_dir = dirname_to_full_path[row.dirname]
+        dwi_path = glob.glob(os.path.join(img_dir, '*.nii'))[0]
+        bval_path = glob.glob(os.path.join(img_dir, '*.bval'))[0]
+        bvec_path = glob.glob(os.path.join(img_dir, '*.bvec'))[0]
+        paths.append({
+            'img_dir' : img_dir,
+            'dwi_path' : dwi_path,
+            'bval_path' : bval_path,
+            'bvec_path' : bvec_path,
+        })
     data.append({
-        'img_dir' : img_dir,
-        'dwi_path' : dwi_path,
-        'bval_path' : bval_path,
-        'bvec_path' : bvec_path,
+        'paths' : paths,
+
         'subjectkey' : row.subjectkey,
-        'interview_age' : row.interview_age
+        'interview_age' : row.interview_age,
     })
 
-# TODO: adjust the data list building to deal with the bathroom break kids
+# Function to load data from one of the dictionaries listed in the object "data" defined above
+def load_data(d):
+    img_data_list =[]
+    bvals_list = []
+    bvecs_list = []
+    prev_affine_transform = None
+
+    for p in d['paths']:
+        img_data, affine = dipy.io.image.load_nifti(p['dwi_path'])
+        assert((prev_affine_transform is None) or (affine==prev_affine_transform).all())
+        prev_affine_transform = affine
+        bvals, bvecs = dipy.io.read_bvals_bvecs(p['bval_path'], p['bvec_path'])
+        img_data_list.append(img_data)
+        bvals_list.append(bvals)
+        bvecs_list.append(bvecs)
+        bvals = np.concatenate(bvals_list)
+    img_data = np.concatenate(img_data_list, axis=-1)
+    bvecs = np.concatenate(bvecs_list, axis=0)
+    gtab = dipy.core.gradients.gradient_table(bvals, bvecs)
+    return img_data, affine, gtab
 
 def process_data_item(d):
 
@@ -63,9 +88,7 @@ def process_data_item(d):
     print(f"Processing {output_file_basename}...")
 
     # Load the diffusion weighted dataset
-    img_data, affine = dipy.io.image.load_nifti(d['dwi_path'])
-    bvals, bvecs = dipy.io.read_bvals_bvecs(d['bval_path'], d['bvec_path'])
-    gtab = dipy.core.gradients.gradient_table(bvals, bvecs)
+    img_data, affine, gtab = load_data(d)
 
     # Use median Otsu method for masking to the brain region
     mask_path = os.path.join(output_dir_brainmask,f'{output_file_basename}.nii.gz')
