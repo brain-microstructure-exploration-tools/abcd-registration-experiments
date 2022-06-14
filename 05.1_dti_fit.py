@@ -2,6 +2,7 @@ import os
 import glob
 import pathlib
 import multiprocessing as mp
+import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,12 +14,25 @@ import dipy.core.gradients
 import dipy.reconst.dti
 import dipy.segment.mask
 
-# TODO turn these into command line parsed args
-num_parallel = mp.cpu_count()
-# Options for whether to force recomputing things when the associated file already exists
-recompute_mask = False
-recompute_dti = False
-recompute_fa = False
+parser = argparse.ArgumentParser(description='Batch process diffusion weighted images: brain mask, DTI fit, and compute FA images.')
+parser.add_argument('numParallel', type=int, nargs='?', default=mp.cpu_count(),
+    help='number of processes to run at a time'
+)
+parser.add_argument('--recomputeMask', default=False, action="store_true",
+    help='force computation of brain mask even if file exists'
+)
+parser.add_argument('--recomputeDTI', default=False, action="store_true",
+    help='force computation of DTI even if file exists'
+)
+parser.add_argument('--recomputeFA', default=False, action="store_true",
+    help='force computation of FA even if file exists'
+)
+args = parser.parse_args()
+
+num_parallel = args.numParallel
+recompute_mask = args.recomputeMask
+recompute_dti = args.recomputeDTI
+recompute_fa = args.recomputeFA
 
 # Define source image and output locations
 data_dir = '/home/ebrahim/data/abcd/DMRI_extracted'
