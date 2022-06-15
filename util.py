@@ -4,7 +4,7 @@ import monai
 import torch
 
 
-def preview_image(image_array, normalize_by="volume", cmap=None, figsize=(12, 12), threshold=None):
+def preview_image(image_array, normalize_by="volume", cmap=None, figsize=(12, 12), threshold=None, slices=None):
     """
     Display three orthogonal slices of the given 3D image.
 
@@ -23,8 +23,11 @@ def preview_image(image_array, normalize_by="volume", cmap=None, figsize=(12, 12
         raise(ValueError(
             f"Invalid value '{normalize_by}' given for normalize_by"))
 
-    # half-way slices
-    x, y, z = np.array(image_array.shape)//2
+    if slices is None:
+        # half-way slices
+        x, y, z = np.array(image_array.shape)//2
+    else:
+        x, y, z = slices
     imgs = (image_array[x, :, :], image_array[:, y, :], image_array[:, :, z])
 
     fig, axs = plt.subplots(1, 3, figsize=figsize)
@@ -61,7 +64,7 @@ def plot_2D_vector_field(vector_field, downsampling):
     )
 
 
-def preview_3D_vector_field(vector_field, downsampling=None):
+def preview_3D_vector_field(vector_field, downsampling=None, slices = None):
     """
     Display three orthogonal slices of the given 3D vector field.
 
@@ -75,7 +78,12 @@ def preview_3D_vector_field(vector_field, downsampling=None):
         # guess a reasonable downsampling value to make a nice plot
         downsampling = max(1, int(max(vector_field.shape[1:])) >> 5)
 
-    x, y, z = np.array(vector_field.shape[1:])//2  # half-way slices
+    if slices is None:
+        # half-way slices
+        x, y, z = np.array(vector_field.shape[1:])//2
+    else:
+        x, y, z = slices
+
     plt.figure(figsize=(18, 6))
     plt.subplot(1, 3, 1)
     plt.axis('off')
@@ -106,7 +114,7 @@ def plot_2D_deformation(vector_field, grid_spacing, **kwargs):
     plt.imshow(grid_img_warped[0], origin='lower', cmap='gist_gray')
 
 
-def preview_3D_deformation(vector_field, grid_spacing, **kwargs):
+def preview_3D_deformation(vector_field, grid_spacing, slices=None, **kwargs):
     """
     Interpret vector_field as a displacement vector field defining a deformation,
     and plot warped grids along three orthogonal slices.
@@ -117,7 +125,10 @@ def preview_3D_deformation(vector_field, grid_spacing, **kwargs):
     Deformations are projected into the viewing plane, so you are only seeing
     their components in the viewing plane.
     """
-    x, y, z = np.array(vector_field.shape[1:])//2  # half-way slices
+    if slices is None:
+        x, y, z = np.array(vector_field.shape[1:])//2  # half-way slices
+    else:
+        x, y, z = slices
     plt.figure(figsize=(18, 6))
     plt.subplot(1, 3, 1)
     plt.axis('off')
