@@ -174,3 +174,56 @@ def jacobian_determinant(vf):
                                                    dz[1]*dx[2]) + dz[0]*(dx[1]*dy[2]-dy[1]*dx[2])
 
     return det
+
+
+checkerboard = lambda i1, i2, e1, e2, n1, n2 : (-1)**(int((i1/e1)*n1) + int((i2/e2)*n2))
+
+def preview_checkerboard(
+    img1, img2, normalize_by="volume", cmap=None, figsize=(12, 12),
+    slices=None, numSquares=8):
+    """
+    Interleave two 3D images in a checkerboard, and display as three orthogonal slices.
+
+    img1 and img2 are assumed to be of shape (H,W,D)
+
+    If a number is provided for threshold, then pixels for which the value
+    is below the threshold will be shown in red
+    """
+    if normalize_by == "slice":
+        vmin = None
+        vmax = None
+    elif normalize_by == "volume":
+        vmin = 0
+        vmax = max(img1.max().item(), img2.max().item())
+    else:
+        raise(ValueError(
+            f"Invalid value '{normalize_by}' given for normalize_by"))
+
+    assert((img1.shape==img2.shape))
+        
+    if slices is None:
+        # half-way slices
+        x, y, z = np.array(img1.shape)//2
+    else:
+        x, y, z = slices
+
+    slices1 = (img1[x, :, :], img1[:, y, :], img1[:, :, z])
+    slices2 = (img2[x, :, :], img2[:, y, :], img2[:, :, z])
+
+    fig, axs = plt.subplots(1, 3, figsize=figsize)
+    for ax, im1, im2 in zip(axs, slices1, slices2):
+        e1,e2 = im1.shape
+        cb = np.array([[checkerboard(i1,i2,e1,e2,numSquares,numSquares) for i2 in range(e2)] for i1 in range(e1)])
+        cb_mask = (cb==1)
+        
+        assert(im1.shape==im2.shape)
+        assert(im1.shape==cb.shape)
+        
+        im3 = np.zeros_like(im1)
+        im3[cb_mask] = im1[cb_mask]
+        im3[~cb_mask] = im2[~cb_mask]
+        
+        ax.axis('off')
+        ax.imshow(im3, origin='lower', vmin=vmin, vmax=vmax, cmap=cmap)
+
+    plt.show()
