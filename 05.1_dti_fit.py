@@ -15,7 +15,10 @@ import dipy.reconst.dti
 import dipy.segment.mask
 
 parser = argparse.ArgumentParser(description='Batch process diffusion weighted images: brain mask, DTI fit, and compute FA images.')
-parser.add_argument('numParallel', type=int, nargs='?', default=mp.cpu_count(),
+parser.add_argument('dataDir', default='./dti_fit_images/', action="store",
+    help='directory of inputs; should contain DMRI folders that were downloaded from ABCD and extracted'
+)
+parser.add_argument('-j', '--numParallel', type=int, nargs='?', default=mp.cpu_count(),
     help='number of processes to run at a time'
 )
 parser.add_argument('--recomputeMask', default=False, action="store_true",
@@ -27,17 +30,20 @@ parser.add_argument('--recomputeDTI', default=False, action="store_true",
 parser.add_argument('--recomputeFA', default=False, action="store_true",
     help='force computation of FA even if file exists'
 )
+parser.add_argument('-o', '--outputDir', default='./dti_fit_images/', action="store",
+    help='output directory'
+)
 args = parser.parse_args()
 
 num_parallel = args.numParallel
 recompute_mask = args.recomputeMask
 recompute_dti = args.recomputeDTI
 recompute_fa = args.recomputeFA
+output_dir = args.outputDir
+data_dir = args.dataDir
 
 # Define source image and output locations
-data_dir = '/home/ebrahim/data/abcd/DMRI_extracted'
 img_dirs = glob.glob(os.path.join(data_dir,'*ABCD-MPROC-DTI*/sub-*/ses-*/dwi/'))
-output_dir = './dti_fit_images/'
 output_dir_dti = os.path.join(output_dir,'dti')
 output_dir_fa = os.path.join(output_dir,'fa')
 output_dir_fa_preview = os.path.join(output_dir,'fa_preview')
