@@ -15,7 +15,7 @@ import dipy.reconst.dti
 import dipy.segment.mask
 
 parser = argparse.ArgumentParser(description='Batch process diffusion weighted images: brain mask, DTI fit, and compute FA images.')
-parser.add_argument('dataDir', default='./dti_fit_images/', action="store",
+parser.add_argument('dataDir', action="store",
     help='directory of inputs; should contain DMRI folders that were downloaded from ABCD and extracted'
 )
 parser.add_argument('-j', '--numParallel', type=int, nargs='?', default=mp.cpu_count(),
