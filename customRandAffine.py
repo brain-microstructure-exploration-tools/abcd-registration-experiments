@@ -54,6 +54,47 @@ from monai.utils.type_conversion import convert_data_type, get_equivalent_dtype,
 
 from monai.transforms.spatial.array import Affine, RandRange, AffineGrid, Resample
 
+from monai.data.utils import list_data_collate
+from monai.data import decollate_batch
+
+
+class AffineAugmentation:
+    """Given two batches of 3D images, apply the same random affine transform to both, and then one different
+    random affine transform to one of them. Useful augmentation for training affine registration models,
+    where one may want to affinely transform a moving and target image pair together and then separately
+    apply a transform to the moving image to displace it away from the target. The first transform helps the
+    network learn to deal with different arrangements of the objects in the image space, and the second
+    transform helps the network deal with different relative object configurations."""
+    def __init__(self, spatial_size, transformation_strength_both, transformation_strength_second):
+        self.spatial_size = spatial_size
+        self.do_both = self.make_transform_of_strength(transformation_strength_both)
+        self.do_second = self.make_transform_of_strength(transformation_strength_second)
+
+    def make_transform_of_strength(self, a):
+        return RandAffineCustom(
+            prob = 1.,
+            mode = 'bilinear',
+            padding_mode = 'zeros',
+            spatial_size = self.spatial_size,
+            cache_grid = True,
+            rotate_range = (a*np.pi/2,)*3,
+            shear_range = (0,)*6, # no shearing
+            translate_range =  [a*s/16 for s in self.spatial_size],
+            scale_range = (1.5**a,),
+            scale_isotropically = True,
+        )
+
+    def __call__(self, first, second):
+        """Input two batches of images, each of shape (b,c,h,w,d)."""
+        out1 = []
+        out2 = []
+        for img1, img2 in zip(decollate_batch(first), decollate_batch(second)):
+            out1.append(self.do_both(img1))
+            out2.append(self.do_second(self.do_both(img2, randomize=False)))
+        return list_data_collate(out1), list_data_collate(out2)
+
+
+
 
 # Copied and modified from monai.transforms.spatial.RandAffineGrid
 # The only difference is how random scales are generated, with the additional of the parameter scale_isotropically
