@@ -150,7 +150,6 @@ class RandAffineGridCustom(Randomizable, Transform):
             lf = np.log(f)
             s = np.exp(self.R.uniform(-lf, lf))
         s = float(s)
-        print(f"ISOTROPIC SCALING {[s,s,s]}.")
         return [s,s,s]
 
       out_param = []
@@ -163,7 +162,6 @@ class RandAffineGridCustom(Randomizable, Transform):
               lf = np.log(f)
               out_param.append(np.exp(self.R.uniform(-lf, lf)))
       out_param = [float(s) for s in out_param]
-      print(f"ANISOTROPIC SCALING {out_param}.")
       return out_param
 
     def randomize(self, data: Optional[Any] = None) -> None:
