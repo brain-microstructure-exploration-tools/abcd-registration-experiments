@@ -156,6 +156,13 @@ def process_data_item(d):
     plt.savefig(os.path.join(output_dir_fa_preview, f'{output_file_basename}.png'))
 
 
-print(f"There are {len(data)} diffusion weighted datasets to process; running {num_parallel} processes in parallel.")
-with mp.Pool(num_parallel) as p:
-    p.map(process_data_item,data)
+if num_parallel>1:
+    print(f"There are {len(data)} diffusion weighted datasets to process; running {num_parallel} processes in parallel.")
+    with mp.Pool(num_parallel) as p:
+        p.map(process_data_item,data)
+else:
+    print(f"There are {len(data)} diffusion weighted datasets to process; running in series.")
+    for d in data:
+        process_data_item(d)
+
+
