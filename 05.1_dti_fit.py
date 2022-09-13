@@ -154,6 +154,7 @@ def process_data_item(d):
     axs[0].imshow(fa[62,:,:].T, origin='lower', cmap='gray')
     axs[1].imshow(fa[:,:,80].T, origin='lower', cmap='gray')
     plt.savefig(os.path.join(output_dir_fa_preview, f'{output_file_basename}.png'))
+    plt.clf()
 
 
 if num_parallel>1:
