@@ -64,11 +64,16 @@ class AffineAugmentation:
     where one may want to affinely transform a moving and target image pair together and then separately
     apply a transform to the moving image to displace it away from the target. The first transform helps the
     network learn to deal with different arrangements of the objects in the image space, and the second
-    transform helps the network deal with different relative object configurations."""
-    def __init__(self, spatial_size, transformation_strength_both, transformation_strength_second):
+    transform helps the network deal with different relative object configurations.
+
+    If the second transform is omitted then this simply applies the same transform to both images."""
+    def __init__(self, spatial_size, transformation_strength_both, transformation_strength_second = None):
         self.spatial_size = spatial_size
         self.do_both = self.make_transform_of_strength(transformation_strength_both)
-        self.do_second = self.make_transform_of_strength(transformation_strength_second)
+        if transformation_strength_second is not None:
+            self.do_second = self.make_transform_of_strength(transformation_strength_second)
+        else:
+            self.do_second = None
 
     def make_transform_of_strength(self, a):
         return RandAffineCustom(
@@ -90,7 +95,10 @@ class AffineAugmentation:
         out2 = []
         for img1, img2 in zip(decollate_batch(first), decollate_batch(second)):
             out1.append(self.do_both(img1))
-            out2.append(self.do_second(self.do_both(img2, randomize=False)))
+            img2_transformed = self.do_both(img2, randomize=False)
+            if self.do_second is not None:
+                img2_transformed = self.do_second(img2_transformed)
+            out2.append(img2_transformed)
         return list_data_collate(out1), list_data_collate(out2)
 
 
