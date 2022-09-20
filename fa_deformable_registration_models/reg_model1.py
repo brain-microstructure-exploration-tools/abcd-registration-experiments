@@ -25,7 +25,7 @@ class RegModel:
         icon_loss_type=IconLossType.ICON,
     ).to(device)
 
-    self.model.load_state_dict(torch.load(trained_state_dict_path))
+    self.model.load_state_dict(torch.load(trained_state_dict_path, map_location=self.device))
     self.model.eval()
 
     self.transform = monai.transforms.Compose([
@@ -78,7 +78,8 @@ class RegModel:
     spatial size is (144,144,144)."""
     target_in = self.transform_batch(target)
     moving_in = self.transform_batch(moving)
-    deformation_AB = self.model(target_in, moving_in, inference_only=True)
+    with torch.no_grad():
+      deformation_AB = self.model(target_in, moving_in, inference_only=True)
 
     if use_input_coords:
       undo_padcrop = undo_padcrop_transform(self.decollate(moving_in)[0], padding_mode="edge")
