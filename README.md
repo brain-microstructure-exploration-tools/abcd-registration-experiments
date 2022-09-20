@@ -8,6 +8,11 @@ Given a dataset of FA images, the "most typical" image can be identified by regi
 
 All images can then be aligned to the "most typical" image, and the aligned images can be saved.
 
+Notes:
+- The deformable registration model is currently experimental. It's not well-tested and it hasn't been properly compared to other existing algorithms.
+- FA Images need to already be affine-aligned before using this tool. A future version of the tool may relax this requirement and include the affine alignment in the predicted deformation. This is not a limitation when working with minimally processed ABCD images, since they are already affine-aligned.
+- The conept of registering all images to the "most typical" image is drawn from the TBSS pipeline, developed [here](https://doi.org/10.1016/j.neuroimage.2006.02.024). This is helpful when dealing with a non-adult population as it can be difficult to find a suitable atlas. It may also improve the potential for alignment quality, because subject images are typically much sharper than a template that is formed by averaging. Finally, and most pratically, we adopt the approach here because it requires only solving the problem of _pairwise_ registration of subject images. More effort is needed to approach the problems of template construction and alignment to a template.
+
 ## Install required dependencies
 
 This section needs to be improved. For now:
