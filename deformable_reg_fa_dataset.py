@@ -1,5 +1,4 @@
 import argparse, sys, csv
-from doctest import OutputChecker
 from pathlib import Path
 import numpy as np
 import monai
@@ -43,12 +42,15 @@ parser.add_argument('--save-transformed-images', action='store_true',
 
 class ImageLoader:
 
-  def __init__(self, image_only=False):
+  def __init__(self, image_only=False, device=None):
     self.monai_loader = monai.transforms.LoadImage(image_only=image_only)
-    self.post_load_steps = monai.transforms.Compose([
+    post_load_steps_list = [
       monai.transforms.AddChannel(),
       monai.transforms.ToTensor(),
-    ])
+    ]
+    if device is not None:
+      post_load_steps_list.append(monai.transforms.ToDevice(device=device))
+    self.post_load_steps = monai.transforms.Compose(post_load_steps_list)
     self.image_only = image_only
   def __call__(self, img_path):
 
@@ -96,7 +98,7 @@ def reg_all_to_target(image_loader, target_path, fa_paths, reg_model, print_prog
 def main(args):
   from fa_deformable_registration_models import reg_model1
 
-  reg_model = reg_model1.RegModel(device='cpu')
+  reg_model = reg_model1.RegModel()
   print(f"Registration model loaded to device {reg_model.device}.")
 
   fa_dir = Path(args.dataset)
@@ -115,7 +117,7 @@ def main(args):
     saved_img_dir = Path(IMG_SAVE_DIR)
     saved_img_dir.mkdir(exist_ok=True)
 
-  image_loader = ImageLoader(image_only=False)
+  image_loader = ImageLoader(image_only=False, device=reg_model.device)
 
   if args.target is not None:
     target_path = Path(args.target)
