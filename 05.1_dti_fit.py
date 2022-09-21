@@ -14,9 +14,18 @@ import dipy.core.gradients
 import dipy.reconst.dti
 import dipy.segment.mask
 
-parser = argparse.ArgumentParser(description='Batch process diffusion weighted images: brain mask, DTI fit, and compute FA images.')
+parser = argparse.ArgumentParser(
+    description='Batch process diffusion weighted images: brain mask, DTI fit, and compute FA images. '+\
+    'This script is specific to the ABCD Study release 4.0, requiring a table from that dataset. '+\
+    'The given table determines which images will be processed, and the given directory is where '+\
+    'the script will look to find the images.'
+)
 parser.add_argument('dataDir', action="store",
     help='directory of inputs; should contain DMRI folders that were downloaded from ABCD and extracted'
+)
+parser.add_argument('table', default='01.0_abcd_sample/sampled_fmriresults01.csv', action="store",
+    help='ABCD dMRI data table. The desired subset of the table fmriresults01.csv. '+\
+        'For an example see 01.0_abcd_sample/sampled_fmriresults01.csv.'
 )
 parser.add_argument('-j', '--numParallel', type=int, nargs='?', default=mp.cpu_count(),
     help='number of processes to run at a time'
@@ -41,6 +50,7 @@ recompute_dti = args.recomputeDTI
 recompute_fa = args.recomputeFA
 output_dir = args.outputDir
 data_dir = args.dataDir
+table_dir = args.table
 
 # Define source image and output locations
 img_dirs = glob.glob(os.path.join(data_dir,'*ABCD-MPROC-DTI*/sub-*/ses-*/dwi/'))
@@ -54,7 +64,7 @@ pathlib.Path(output_dir_fa).mkdir(exist_ok=True)
 pathlib.Path(output_dir_fa_preview).mkdir(exist_ok=True)
 
 # Using the sampled table, generate a list of dicts where each dict represents one diffusion weighted dataset
-sampled_fmriresults01_df = pd.read_csv('01.0_abcd_sample/sampled_fmriresults01.csv')
+sampled_fmriresults01_df = pd.read_csv(table_dir)
 sampled_fmriresults01_df['dirname'] = sampled_fmriresults01_df.derived_files.apply(lambda x : x.split('/')[-1].strip('.tgz'))
 dirname_to_full_path = {img_dir.split('/')[-5]:img_dir for img_dir in img_dirs}
 data = []
