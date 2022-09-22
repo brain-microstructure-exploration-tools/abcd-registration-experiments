@@ -121,9 +121,10 @@ def process_data_item(d):
     img_data, affine, gtab = load_data(d)
 
     # Use median Otsu method for masking to the brain region
+    # We only use bvalue=0 images (i.e. non DW ones) for brain mask computation; see 05.2_brainmask_quality_check.ipynb
     mask_path = os.path.join(output_dir_brainmask,f'{output_file_basename}.nii.gz')
     if recompute_mask or not os.path.exists(mask_path):
-        img_data_masked, mask = dipy.segment.mask.median_otsu(img_data, vol_idx = range(img_data.shape[-1]))
+        img_data_masked, mask = dipy.segment.mask.median_otsu(img_data, vol_idx = np.where(gtab.bvals==0)[0])
         dipy.io.image.save_nifti(mask_path, mask.astype(np.float32), affine)
     else:
         mask_loaded, mask_loaded_affine = dipy.io.image.load_nifti(mask_path)
