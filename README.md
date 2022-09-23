@@ -1,5 +1,38 @@
 This repository contains various scripts and notebooks related to my exploration of [dMRI](https://en.wikipedia.org/wiki/Diffusion_MRI) [image registration](https://en.wikipedia.org/wiki/Image_registration) for the [ABCD Study](https://abcdstudy.org/) dataset.
 
+# Compute brain mask, DTI fit, and FA images
+
+Numpy, pandas, and dipy are needed.
+
+```sh
+python 05.1_dti_fit.py --help
+```
+
+## Standard usage example
+
+The following command processes 8 images at a time, it uses the images indicated in the table `fmriresults01_subset.csv` (a chosen subset of the ABCD table `fmriresults01.csv`), it looks for extracted images in the directory `/data/dmri_extracted/`, and it writes output to `my_output_dir/`.
+
+```sh
+python 05.1_dti_fit.py /data/dmri_extracted/ fmriresults01_subset.csv -j 8 -o my_output_dir/
+```
+
+## Brainmasking with GPU example
+
+This option is different and seems to produce better brain masks, but it is not necessarily faster because GPU memory limits the potential for parallelism. GPU memory also limits filter size, but the increased speed makes it cheap to run the filter many times. Processing one image is much faster this way, but there's not much time saved when processing a large dataset.
+
+This option requires CUDA and PyTorch.
+
+First compute brain masks using the GPU approach:
+```sh
+python 05.1_dti_fit.py /data/dmri_extracted/ fmriresults01_subset.csv -j 1 -o my_output_dir/ --useGPU --masksOnly
+```
+This GPU approach allows for more filter passes, but uses a lot of memory and so it is set to use a smaller filter. We run in series, i.e. one image at a time, due to GPU memory limitations.
+
+Then compute the other stuff in parallel, using the already computed brain masks:
+```sh
+python 05.1_dti_fit.py /data/dmri_extracted/ fmriresults01_subset.csv -o my_output_dir/
+```
+
 # Deformable registration tool for FA datasets
 
 This tool uses a deep learning based nonlinear registration model to do pairwise registration of FA images.
@@ -16,7 +49,7 @@ Notes:
 ## Install required dependencies
 
 This section needs to be improved. For now:
-- you need a python environment with MONAI and numpy. install MONAI by first correctly installing torch.
+- you need a python environment with MONAI and numpy. install MONAI by first correctly installing PyTorch.
 - if you have CUDA then it will be used
 
 ## Get trained model weights
