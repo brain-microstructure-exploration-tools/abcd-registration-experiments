@@ -74,7 +74,7 @@ Suppose you have a directory `./dti_fit_images/fa` of FA images saved as `*.nii.
 
 Determine the "most typical" image:
 ```bash
-python deformable_reg_fa_dataset.py dti_fit_images/fa --target dti_fit_images/fa/NDAR_INVPRNEYMH1-108.nii.gz --save-transformed-images
+python deformable_reg_fa_dataset.py dti_fit_images/fa
 ```
 
 Say the most typical image turns out to be `subject123.nii.gz`. Now align all images to it and save the aligned images:
