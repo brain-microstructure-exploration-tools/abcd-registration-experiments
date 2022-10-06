@@ -1,11 +1,8 @@
 
-import dipy.io.image
-import dipy.reconst.dti
 import monai
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from util import batchify
 from spatial_derivatives import DerivativeOfDDF
 from enum import Enum
 
@@ -15,12 +12,8 @@ dipy2torch_lotri_batch = lambda t : t.permute(0,4,1,2,3)
 torch2dipy_lotri_batch = lambda t : t.permute(0,2,3,4,1)
 dipy2torch_mat_batch = lambda t : t.permute(0,4,5,1,2,3)
 torch2dipy_mat_batch = lambda t : t.permute(0,3,4,5,1,2)
-dipy_lotri2mat = dipy.reconst.dti.from_lower_triangular
-dipy_lotri2mat_batch = batchify(dipy_lotri2mat)
-dipy_mat2lotri = dipy.reconst.dti.lower_triangular
-dipy_mat2lotri_batch = batchify(dipy.reconst.dti.lower_triangular)
-torch_lotri2mat_batch = lambda t : dipy2torch_mat_batch(dipy_lotri2mat_batch(torch2dipy_lotri_batch(t)))
-torch_mat2lotri_batch = lambda t : dipy2torch_lotri_batch(dipy_mat2lotri_batch(torch2dipy_mat_batch(t)))
+torch_lotri2mat_batch = lambda t : t[:,[[0,1,3],[1,2,4],[3,4,5]],:,:,:]
+torch_mat2lotri_batch = lambda t : t[:,[0, 1, 1, 2, 2, 2],[0, 0, 1, 0, 1, 2],:,:,:]
 torch_mat_batch_absorbspatial = lambda t : t.permute((0,3,4,5,1,2)).reshape((-1,3,3))
 torch_mat_batch_expandspatial = lambda t,b,h,w,d : t.reshape(b,h,w,d,3,3).permute((0,4,5,1,2,3))
 
@@ -85,7 +78,7 @@ class WarpDTI(nn.Module):
 
           # Get SVD of jacobian and derive from it the orthogonal component of the jacobian,
           # in the sense of polar decomposition.
-          U, _, Vh = torch.linalg.svd(J_mat_nospatial)
+          U, _, Vh = torch.linalg.svd(J_mat_nospatial, full_matrices=False)
           Jrot_mat_nospatial = torch.matmul(U, Vh)
 
           # Transform tensors using the tensor transformation law, but using only the rotational component Jrot of J
