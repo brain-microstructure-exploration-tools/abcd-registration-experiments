@@ -200,7 +200,7 @@ def preview_checkerboard(
             f"Invalid value '{normalize_by}' given for normalize_by"))
 
     assert((img1.shape==img2.shape))
-        
+
     if slices is None:
         # half-way slices
         x, y, z = np.array(img1.shape)//2
@@ -215,15 +215,82 @@ def preview_checkerboard(
         e1,e2 = im1.shape
         cb = np.array([[checkerboard(i1,i2,e1,e2,numSquares,numSquares) for i2 in range(e2)] for i1 in range(e1)])
         cb_mask = (cb==1)
-        
+
         assert(im1.shape==im2.shape)
         assert(im1.shape==cb.shape)
-        
+
         im3 = np.zeros_like(im1)
         im3[cb_mask] = im1[cb_mask]
         im3[~cb_mask] = im2[~cb_mask]
-        
+
         ax.axis('off')
         ax.imshow(im3, origin='lower', vmin=vmin, vmax=vmax, cmap=cmap)
 
     plt.show()
+
+
+
+def mse_loss(b1, b2):
+    """Return image similarity loss given two batches b1 and b2 of shape (batch_size, channels, H,W,D).
+    It is scaled up a bit here."""
+    return ((b1-b2)**2).mean()
+
+def ncc_loss(b1, b2):
+    """Return the negative NCC loss given two batches b1 and b2 of shape (batch_size, channels, H,W,D).
+    It is averaged over batches and channels."""
+    mu1 = b1.mean(dim=(2,3,4)) # means
+    mu2 = b2.mean(dim=(2,3,4))
+    alpha1 = (b1**2).mean(dim=(2,3,4)) # second moments
+    alpha2 = (b2**2).mean(dim=(2,3,4))
+    alpha12 = (b1*b2).mean(dim=(2,3,4)) # cross term
+    numerator = alpha12 - mu1*mu2
+    denominator = torch.sqrt((alpha1 - mu1**2) * (alpha2-mu2**2))
+    ncc = numerator / denominator
+    return -ncc.mean() # average over batches and channels
+
+def compose_ddf(u,v, warp):
+    """Compose two displacement fields, return the displacement that warps by v followed by u
+    Use the given warper (e.g. a monai.networks.blocks.Warp)"""
+    return u + warp(v,u)
+
+# Compute discrete spatial derivatives
+def diff_and_trim(array, axis, spatial_size):
+    """Take the discrete difference along a spatial axis, which should be 2,3, or 4.
+    Return a difference tensor with all spatial axes trimmed by 1."""
+    return torch.diff(array, axis=axis)[:, :, :(spatial_size[0]-1), :(spatial_size[1]-1), :(spatial_size[2]-1)]
+
+def size_of_spatial_derivative(u):
+    """Return the squared Frobenius norm of the spatial derivative of the given displacement field.
+    To clarify, this is about the derivative of the actual displacement field map, not the deformation
+    that the displacement field map defines. The expected input shape is (batch,3,H,W,D).
+    Output shape is (batch)."""
+    dx = diff_and_trim(u, 2)
+    dy = diff_and_trim(u, 3)
+    dz = diff_and_trim(u, 4)
+    return(dx**2 + dy**2 + dz**2).sum(axis=1).mean(axis=[1,2,3])
+
+# Monai transforms typically apply to individual objects and not batches.
+# This functor takes a transform and produces a version of it that operates on batches.
+# Handles MetaTensor correctly
+class BatchifiedTransform:
+    def __init__(self, transform):
+        self.transform = transform
+    def __call__(self, batch):
+        return monai.data.utils.list_data_collate(
+            [self.transform(x) for x in monai.transforms.Decollated()(batch)]
+        )
+
+def batchify(f):
+    """Return a function that maps the given function f over batches.
+
+    Args:
+        f: a function that maps torch tensors to torch tensors, with no batch dimension expected.
+
+    This handles MetaTensor correctly."""
+    def batchified_f(t):
+        return monai.data.utils.list_data_collate(
+            [f(x) for x in monai.transforms.Decollated()(t)]
+        )
+    
+    return batchified_f
+

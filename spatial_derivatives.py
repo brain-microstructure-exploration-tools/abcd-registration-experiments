@@ -95,7 +95,7 @@ class DerivativeOfDDF(nn.Module):
     is just not very likely for my use case.)
 
     Args:
-        input: the input image representing a spatial trans
+        input: the input image representing a spatial transformation
 
     Returns:
         the jacobian matrix field with shape :math:`(B,9,H,W,D)`,

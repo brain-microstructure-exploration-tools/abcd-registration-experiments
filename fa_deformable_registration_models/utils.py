@@ -52,6 +52,18 @@ class BatchifiedTransform:
             [self.transform(x) for x in monai.transforms.Decollated()(batch)]
         )
 
+def batchify(f):
+    """Return a function that maps the given function f over batches.
+
+    Args:
+        f: a function that maps torch tensors to torch tensors, with no batch dimension expected.
+
+    This handles MetaTensor correctly."""
+    def batchified_f(t):
+        return monai.data.utils.list_data_collate(
+            [f(x) for x in monai.transforms.Decollated()(t)]
+        )
+    return batchified_f
 
 
 def _undo_crop_by_padding(crop_op, padding_mode):
