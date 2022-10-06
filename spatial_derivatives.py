@@ -123,8 +123,8 @@ class DerivativeOfDDF(nn.Module):
     def __init__(self, device='cpu') -> None:
         super().__init__()
         self.kernel, self.bias = get_kernel_bias()
-        self.kernel = self.kernel.to(device);
-        self.bias = self.bias.to(device);
+        self.kernel = self.kernel.to(device)
+        self.bias = self.bias.to(device)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return spatial_derivative(input, (self.kernel, self.bias))

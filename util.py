@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import monai
 import torch
+import torch.nn as nn
+
 
 
 def preview_image(image_array, normalize_by="volume", cmap=None, figsize=(12, 12), threshold=None, slices=None):
@@ -236,8 +238,10 @@ def mse_loss(b1, b2):
     return ((b1-b2)**2).mean()
 
 def ncc_loss(b1, b2):
-    """Return the negative NCC loss given two batches b1 and b2 of shape (batch_size, channels, H,W,D).
-    It is averaged over batches and channels."""
+    """Return the negative NCC given two batches b1 and b2 of shape (batch_size, channels, H,W,D).
+    It is averaged over batches and channels. Division by zero is possible if image variance can vanish,
+    so if that's a worry then it needs to be handled (e.g. by editing this function to add a small
+    positive number to the denominator)."""
     mu1 = b1.mean(dim=(2,3,4)) # means
     mu2 = b2.mean(dim=(2,3,4))
     alpha1 = (b1**2).mean(dim=(2,3,4)) # second moments
@@ -248,10 +252,15 @@ def ncc_loss(b1, b2):
     ncc = numerator / denominator
     return -ncc.mean() # average over batches and channels
 
-def compose_ddf(u,v, warp):
-    """Compose two displacement fields, return the displacement that warps by v followed by u
-    Use the given warper (e.g. a monai.networks.blocks.Warp)"""
-    return u + warp(v,u)
+class ComposeDDF(nn.Module):
+  """Compose two displacement fields, return the displacement that warps by v followed by u."""
+  def __init__(self, device='cpu') -> None:
+    super().__init__()
+
+    self.warp = monai.networks.blocks.Warp(mode='bilinear', padding_mode='zeros')
+
+  def forward(self, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+    return u + self.warp(v,u)
 
 # Compute discrete spatial derivatives
 def diff_and_trim(array, axis, spatial_size):
@@ -263,7 +272,9 @@ def size_of_spatial_derivative(u):
     """Return the squared Frobenius norm of the spatial derivative of the given displacement field.
     To clarify, this is about the derivative of the actual displacement field map, not the deformation
     that the displacement field map defines. The expected input shape is (batch,3,H,W,D).
-    Output shape is (batch)."""
+    Output shape is (batch).
+
+    See spatial_derivatives.py for a more fleshed out spatial derivative module that uses central difference"""
     dx = diff_and_trim(u, 2)
     dy = diff_and_trim(u, 3)
     dz = diff_and_trim(u, 4)
@@ -291,6 +302,6 @@ def batchify(f):
         return monai.data.utils.list_data_collate(
             [f(x) for x in monai.transforms.Decollated()(t)]
         )
-    
+
     return batchified_f
 
