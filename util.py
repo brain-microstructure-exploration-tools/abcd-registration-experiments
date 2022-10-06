@@ -254,7 +254,7 @@ def ncc_loss(b1, b2):
 
 class ComposeDDF(nn.Module):
   """Compose two displacement fields, return the displacement that warps by v followed by u."""
-  def __init__(self, device='cpu') -> None:
+  def __init__(self) -> None:
     super().__init__()
 
     self.warp = monai.networks.blocks.Warp(mode='bilinear', padding_mode='zeros')
