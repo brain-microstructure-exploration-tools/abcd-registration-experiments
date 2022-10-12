@@ -42,13 +42,32 @@ class WarpDTI(nn.Module):
       - Output: :math:`(B, 6, H, W, D)`
   """
 
-  def __init__(self, device='cpu', tensor_transform_type = TensorTransformType.FINITE_STRAIN) -> None:
+  def __init__(self,
+    device='cpu',
+    tensor_transform_type = TensorTransformType.FINITE_STRAIN,
+    polar_decomposition_mode = 'svd',
+  ) -> None:
+    """
+      Args:
+        device: cpu, cuda, etc.
+        tensor_transform_type: Method used to rotate diffusion tensors
+        polar_decomposition_mode: Algorithm to use for polar decomposition.
+          Only applies when tensor_transform_type is finite strain method.
+          Can be "svd" to use torch.linalg.svd (gradients are sometimes numerically unstable for this),
+          or can be an integer to indication doing a Newton approximation with the given number of iterations.
+    """
     super().__init__()
 
     # spatial resampling without the tensor transform
     self.warp = monai.networks.blocks.Warp(mode="bilinear", padding_mode="border")
     self.deriv_ddf = DerivativeOfDDF(device=device)
     self.tensor_transform_type = tensor_transform_type
+
+    if polar_decomposition_mode=='svd':
+      self.use_svd = True
+    else:
+      self.use_svd = False
+      self.polar_decomp_iterations = int(polar_decomposition_mode)
 
   def forward(self, dti: torch.Tensor, ddf: torch.Tensor) -> torch.Tensor:
     if (len(dti.shape)!=5 or dti.shape[1]!=6):
@@ -76,10 +95,17 @@ class WarpDTI(nn.Module):
       # Move the spatial dimensions into the batch dimension
       J_mat_nospatial = torch_mat_batch_absorbspatial(J_mat)
 
-      # Get SVD of jacobian and derive from it the orthogonal component of the jacobian,
-      # in the sense of polar decomposition.
-      U, _, Vh = torch.linalg.svd(J_mat_nospatial, full_matrices=False)
-      Jrot_mat_nospatial = torch.matmul(U, Vh)
+      # Get the orthogonal component of the jacobian, in the sense of polar decomposition.
+      if self.use_svd:
+        U, _, Vh = torch.linalg.svd(J_mat_nospatial, full_matrices=False)
+        Jrot_mat_nospatial = torch.matmul(U, Vh)
+      else:
+        U = J_mat_nospatial
+        for _ in range(self.polar_decomp_iterations):
+          zeta = torch.linalg.det(U).abs()**(-1/3)
+          zU = zeta.view(-1,1,1) * U
+          U = 0.5 * ( zU + torch.linalg.inv(zU.permute(0,2,1)) )
+        Jrot_mat_nospatial = U
 
       # Transform tensors using the tensor transformation law, but using only the rotational component Jrot of J
       # This is the so-called finite strain method.
