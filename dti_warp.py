@@ -1,4 +1,5 @@
 
+from pickle import FROZENSET
 import monai
 import torch
 import torch.nn as nn
@@ -20,6 +21,45 @@ torch_mat_batch_expandspatial = lambda t,b,h,w,d : t.reshape(b,h,w,d,3,3).permut
 class TensorTransformType(Enum):
   NONE = 0
   FINITE_STRAIN = 1
+
+class PolarDecompositionMode(Enum):
+  SVD = 0
+  NEWTON = 1
+
+class NewtonIterationScaleFactor(Enum):
+  NONE = 0
+  DET = 1
+  FROBENIUS = 2
+
+def newton_iterate_none(X, N):
+  U = X
+  for _ in range(N):
+    U = 0.5 * ( U + torch.linalg.inv(U.permute(0,2,1)) )
+  return U
+
+def newton_iterate_det(X, N):
+  U = X
+  for _ in range(N):
+    zeta = torch.linalg.det(U).abs()**(-1/3)
+    zU = zeta.view(-1,1,1) * U
+    U = 0.5 * ( zU + torch.linalg.inv(zU.permute(0,2,1)) )
+  return U
+
+def newton_iterate_frobenius(X, N):
+  U = X
+  for _ in range(N):
+    Uinv = torch.linalg.inv(U)
+    zeta = torch.sqrt((Uinv**2).sum(dim=[1,2]) / (U**2).sum(dim=[1,2]))
+    zU = zeta.view(-1,1,1) * U
+    zUinv = (1/zeta).view(-1,1,1) * Uinv
+    U = 0.5 * ( zU + zUinv.permute(0,2,1) )
+  return U
+
+newton_iterate = {
+  NewtonIterationScaleFactor.NONE : newton_iterate_none,
+  NewtonIterationScaleFactor.DET : newton_iterate_det,
+  NewtonIterationScaleFactor.FROBENIUS : newton_iterate_frobenius,
+}
 
 class WarpDTI(nn.Module):
   r"""Apply a DDF to warp a diffusion tensor image.
@@ -45,7 +85,9 @@ class WarpDTI(nn.Module):
   def __init__(self,
     device='cpu',
     tensor_transform_type = TensorTransformType.FINITE_STRAIN,
-    polar_decomposition_mode = 'svd',
+    polar_decomposition_mode = PolarDecompositionMode.SVD,
+    num_newton_iterations : int = None,
+    newton_iteration_scale_factor : NewtonIterationScaleFactor = None,
   ) -> None:
     """
       Args:
@@ -53,21 +95,23 @@ class WarpDTI(nn.Module):
         tensor_transform_type: Method used to rotate diffusion tensors
         polar_decomposition_mode: Algorithm to use for polar decomposition.
           Only applies when tensor_transform_type is finite strain method.
-          Can be "svd" to use torch.linalg.svd (gradients are sometimes numerically unstable for this),
-          or can be an integer to indication doing a Newton approximation with the given number of iterations.
+          Can be "svd" to use torch.linalg.svd (gradients are sometimes numerically unstable for this).
+          Can be "newton" to do a newton iteration. In this case see the argument num_newton_iterations.
+        num_newton_iterations: an integer indicating the number of newton iterations to carry out in polar decomposition.
+          Only applies when tensor_transform_type is finite strain method and polar_decomposition_mode is newton
+        newton_iteration_scale_factor: what method to use for the scale factor for accelerating convergence of the newton method.
+          Only applies when tensor_transform_type is finite strain method and polar_decomposition_mode is newton
     """
     super().__init__()
 
     # spatial resampling without the tensor transform
     self.warp = monai.networks.blocks.Warp(mode="bilinear", padding_mode="border")
     self.deriv_ddf = DerivativeOfDDF(device=device)
-    self.tensor_transform_type = tensor_transform_type
 
-    if polar_decomposition_mode=='svd':
-      self.use_svd = True
-    else:
-      self.use_svd = False
-      self.polar_decomp_iterations = int(polar_decomposition_mode)
+    self.tensor_transform_type = tensor_transform_type
+    self.polar_decomposition_mode = polar_decomposition_mode
+    self.num_newton_iterations = num_newton_iterations
+    self.newton_iteration_scale_factor = newton_iteration_scale_factor
 
   def forward(self, dti: torch.Tensor, ddf: torch.Tensor) -> torch.Tensor:
     if (len(dti.shape)!=5 or dti.shape[1]!=6):
@@ -96,16 +140,16 @@ class WarpDTI(nn.Module):
       J_mat_nospatial = torch_mat_batch_absorbspatial(J_mat)
 
       # Get the orthogonal component of the jacobian, in the sense of polar decomposition.
-      if self.use_svd:
-        U, _, Vh = torch.linalg.svd(J_mat_nospatial, full_matrices=False)
-        Jrot_mat_nospatial = torch.matmul(U, Vh)
+      if self.tensor_transform_type == TensorTransformType.FINITE_STRAIN:
+        if self.polar_decomposition_mode == PolarDecompositionMode.SVD:
+          U, _, Vh = torch.linalg.svd(J_mat_nospatial, full_matrices=False)
+          Jrot_mat_nospatial = torch.matmul(U, Vh)
+        elif self.polar_decomposition_mode == PolarDecompositionMode.NEWTON:
+          Jrot_mat_nospatial = newton_iterate[self.newton_iteration_scale_factor](J_mat_nospatial, self.num_newton_iterations)
+      elif self.tensor_transform_type == TensorTransformType.NONE:
+        Jrot_mat_nospatial = J_mat_nospatial
       else:
-        U = J_mat_nospatial
-        for _ in range(self.polar_decomp_iterations):
-          zeta = torch.linalg.det(U).abs()**(-1/3)
-          zU = zeta.view(-1,1,1) * U
-          U = 0.5 * ( zU + torch.linalg.inv(zU.permute(0,2,1)) )
-        Jrot_mat_nospatial = U
+        raise Exception(f"tensor_transform_type {self.tensor_transform_type} is not supported.")
 
       # Transform tensors using the tensor transformation law, but using only the rotational component Jrot of J
       # This is the so-called finite strain method.
