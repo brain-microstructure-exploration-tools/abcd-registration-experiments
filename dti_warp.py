@@ -166,8 +166,8 @@ class WarpDTI(nn.Module):
     self.num_iterations = num_iterations
     self.newton_iteration_scale_factor = newton_iteration_scale_factor
 
-    # keep track of batch sizes being used, to cache some batch-size dependent objects
-    self.last_batch_size = None
+    # helps to cache id_stack if needed, which is used for some of the techniques
+    self.last_id_stack_batch_size = None
 
   def forward(self, dti: torch.Tensor, ddf: torch.Tensor) -> torch.Tensor:
     if (len(dti.shape)!=5 or dti.shape[1]!=6):
@@ -177,11 +177,6 @@ class WarpDTI(nn.Module):
       raise ValueError(f"Expected ddf to have shape (B, 3, H, W, D), but got {tuple(ddf.shape)}")
     if (ddf.shape[2:] != dti.shape[2:]):
       raise ValueError(f"Expected dti to have same spatial dimensions as ddf, but got {tuple(dti.shape[2:])} and {tuple(ddf.shape[2:])}")
-
-    batch_size = dti.shape[0]
-    if batch_size != self.last_batch_size:
-      self.on_batch_size_change(batch_size)
-    self.last_batch_size = batch_size
 
     # Warp the DTI, spatially moving tensors but not transforming the tensors yet
     dti_warped_lotri = self.warp(dti, ddf)
@@ -208,8 +203,10 @@ class WarpDTI(nn.Module):
         elif self.polar_decomposition_mode == PolarDecompositionMode.NEWTON:
           Jrot_mat_nospatial = newton_iterate[self.newton_iteration_scale_factor](J_mat_nospatial, self.num_iterations)
         elif self.polar_decomposition_mode == PolarDecompositionMode.HALLEY:
+          self.update_id_stack(J_mat_nospatial.shape[0])
           Jrot_mat_nospatial = halley_iterate(J_mat_nospatial, self.num_iterations, self.id_stack)
         elif self.polar_decomposition_mode == PolarDecompositionMode.HALLEY_DYNAMIC_WEIGHTS:
+          self.update_id_stack(J_mat_nospatial.shape[0])
           Jrot_mat_nospatial = halley_iterate_QDWH(J_mat_nospatial, self.num_iterations, self.id_stack)
       elif self.tensor_transform_type == TensorTransformType.NONE:
         Jrot_mat_nospatial = J_mat_nospatial
@@ -240,11 +237,11 @@ class WarpDTI(nn.Module):
 
     return dti_warped_transformed_lotri
 
-  def on_batch_size_change(self, batch_size):
-    """Update cached objects based on new batch size"""
-    if self.polar_decomposition_mode in [PolarDecompositionMode.HALLEY, PolarDecompositionMode.HALLEY_DYNAMIC_WEIGHTS]:
-      self.id_stack = torch.repeat_interleave(torch.eye(3).unsqueeze(0), batch_size, dim=0).to(self.device)
-
+  def update_id_stack(self, batch_size):
+    """Update cached id_stack based on batch size"""
+    if batch_size != self.last_id_stack_batch_size:
+       self.id_stack = torch.repeat_interleave(torch.eye(3).unsqueeze(0), batch_size, dim=0).to(self.device)
+    self.last_id_stack_batch_size = batch_size
 
 class MseLossDTI(nn.Module):
   """Compare two DTIs and return the spatially averaged squared distance between diffusion tensors,
