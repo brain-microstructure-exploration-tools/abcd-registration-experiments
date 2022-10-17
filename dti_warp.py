@@ -25,6 +25,7 @@ class TensorTransformType(Enum):
 class PolarDecompositionMode(Enum):
   SVD = 0
   NEWTON = 1
+  HALLEY = 2
 
 class NewtonIterationScaleFactor(Enum):
   NONE = 0
@@ -60,6 +61,25 @@ newton_iterate = {
   NewtonIterationScaleFactor.DET : newton_iterate_det,
   NewtonIterationScaleFactor.FROBENIUS : newton_iterate_frobenius,
 }
+
+def halley_iterate(X, N, id_stack = None):
+  """Use Halley iteration to approximate the orthogonal component of the polar decomposition of X.
+  This uses a QR-decomposition approach so that it can be free of matrix inversion.
+  Args:
+    X: batch of matrices, shape (B,3,3)
+    N: number of halley iterations to compute
+    id_stack: a stack of identity matrices, shaped (B,3,3), on the same device as X
+  """
+  if id_stack is None:
+    id_stack = torch.repeat_interleave(torch.eye(3).unsqueeze(0),X.shape[0],dim=0).to(X)
+  for _ in range(N):
+    Q,_ = torch.linalg.qr( torch.cat([ X * (3**(1/2)) , id_stack], dim=1) )
+    Q1 = Q[:,:3,:]
+    Q2 = Q[:,3:,:]
+    X = (1/3) * X + (3**(-1/2))*(3-1/3)*torch.matmul(Q1, Q2.permute(0,2,1))
+  return X
+
+
 
 class WarpDTI(nn.Module):
   r"""Apply a DDF to warp a diffusion tensor image.
