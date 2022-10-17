@@ -26,6 +26,7 @@ class PolarDecompositionMode(Enum):
   SVD = 0
   NEWTON = 1
   HALLEY = 2
+  HALLEY_DYNAMIC_WEIGHTS = 3 # see https://doi.org/10.1137/090774999
 
 class NewtonIterationScaleFactor(Enum):
   NONE = 0
@@ -79,6 +80,35 @@ def halley_iterate(X, N, id_stack = None):
     X = (1/3) * X + (3**(-1/2))*(3-1/3)*torch.matmul(Q1, Q2.permute(0,2,1))
   return X
 
+def halley_iterate_QDWH(X, N, id_stack = None):
+  """Use dynamically-weighted Halley iteration to approximate the orthogonal component
+  of the polar decomposition of X.
+  See https://doi.org/10.1137/090774999
+  This uses a QR-decomposition approach so that it can be free of matrix inversion.
+  Args:
+    X: batch of matrices, shape (B,3,3)
+    N: number of halley iterations to compute
+    id_stack: a stack of identity matrices, shaped (B,3,3), on the same device as X
+  """
+  if id_stack is None:
+    id_stack = torch.repeat_interleave(torch.eye(3).unsqueeze(0),X.shape[0],dim=0).to(X)
+  svdvals = torch.linalg.svdvals(X)
+  alpha = svdvals[:,0].view(-1,1,1)
+  beta  = svdvals[:,2].view(-1,1,1)
+  X = X / alpha.view(-1,1,1)
+  l = beta/alpha
+  for _ in range(N):
+    d = ((4*(1-l**2))/(l**4))**(1/3)
+    a = (1+d)**(1/2) + 0.5*(8-4*d+(8*(2-l**2))/(l**2*(1+d)**(1/2)))**(1/2)
+    b = (a-1)**2 / 4
+    c = a + b - 1
+    Q,_ = torch.linalg.qr( torch.cat([ X * (c**(1/2)) , id_stack], dim=1) )
+    Q1 = Q[:,:3,:]
+    Q2 = Q[:,3:,:]
+    X = (b/c) * X + (c**(-1/2))*(a-b/c)*torch.matmul(Q1, Q2.permute(0,2,1))
+    l = torch.clamp(l*(a+b*(l**2)) / (1+c*(l**2)), max=1.0) # everything breaks if l slightly exceeds 1.0 from numerical error
+  return X
+
 
 
 class WarpDTI(nn.Module):
@@ -106,7 +136,7 @@ class WarpDTI(nn.Module):
     device='cpu',
     tensor_transform_type = TensorTransformType.FINITE_STRAIN,
     polar_decomposition_mode = PolarDecompositionMode.SVD,
-    num_newton_iterations : int = None,
+    num_iterations : int = None,
     newton_iteration_scale_factor : NewtonIterationScaleFactor = None,
   ) -> None:
     """
@@ -115,10 +145,12 @@ class WarpDTI(nn.Module):
         tensor_transform_type: Method used to rotate diffusion tensors
         polar_decomposition_mode: Algorithm to use for polar decomposition.
           Only applies when tensor_transform_type is finite strain method.
-          Can be "svd" to use torch.linalg.svd (gradients are sometimes numerically unstable for this).
-          Can be "newton" to do a newton iteration. In this case see the argument num_newton_iterations.
-        num_newton_iterations: an integer indicating the number of newton iterations to carry out in polar decomposition.
-          Only applies when tensor_transform_type is finite strain method and polar_decomposition_mode is newton
+          Can use torch.linalg.svd (gradients are sometimes numerically unstable for this).
+          Can do Newton iteration. In this case see the argument num_iterations.
+          Can do Halley iteration, with standard weights or with dynamic weights. This is inverse-free.
+        num_iterations: an integer indicating the number of iterations to carry out in an an approximation
+          technique to computing the polar decomposition.
+          Only applies when tensor_transform_type is finite strain method and polar_decomposition_mode is newton or halley.
         newton_iteration_scale_factor: what method to use for the scale factor for accelerating convergence of the newton method.
           Only applies when tensor_transform_type is finite strain method and polar_decomposition_mode is newton
     """
@@ -128,10 +160,14 @@ class WarpDTI(nn.Module):
     self.warp = monai.networks.blocks.Warp(mode="bilinear", padding_mode="border")
     self.deriv_ddf = DerivativeOfDDF(device=device)
 
+    self.device= device
     self.tensor_transform_type = tensor_transform_type
     self.polar_decomposition_mode = polar_decomposition_mode
-    self.num_newton_iterations = num_newton_iterations
+    self.num_iterations = num_iterations
     self.newton_iteration_scale_factor = newton_iteration_scale_factor
+
+    # keep track of batch sizes being used, to cache some batch-size dependent objects
+    self.last_batch_size = None
 
   def forward(self, dti: torch.Tensor, ddf: torch.Tensor) -> torch.Tensor:
     if (len(dti.shape)!=5 or dti.shape[1]!=6):
@@ -141,6 +177,11 @@ class WarpDTI(nn.Module):
       raise ValueError(f"Expected ddf to have shape (B, 3, H, W, D), but got {tuple(ddf.shape)}")
     if (ddf.shape[2:] != dti.shape[2:]):
       raise ValueError(f"Expected dti to have same spatial dimensions as ddf, but got {tuple(dti.shape[2:])} and {tuple(ddf.shape[2:])}")
+
+    batch_size = dti.shape[0]
+    if batch_size != self.last_batch_size:
+      self.on_batch_size_change(batch_size)
+    self.last_batch_size = batch_size
 
     # Warp the DTI, spatially moving tensors but not transforming the tensors yet
     dti_warped_lotri = self.warp(dti, ddf)
@@ -165,7 +206,11 @@ class WarpDTI(nn.Module):
           U, _, Vh = torch.linalg.svd(J_mat_nospatial, full_matrices=False)
           Jrot_mat_nospatial = torch.matmul(U, Vh)
         elif self.polar_decomposition_mode == PolarDecompositionMode.NEWTON:
-          Jrot_mat_nospatial = newton_iterate[self.newton_iteration_scale_factor](J_mat_nospatial, self.num_newton_iterations)
+          Jrot_mat_nospatial = newton_iterate[self.newton_iteration_scale_factor](J_mat_nospatial, self.num_iterations)
+        elif self.polar_decomposition_mode == PolarDecompositionMode.HALLEY:
+          Jrot_mat_nospatial = halley_iterate(J_mat_nospatial, self.num_iterations, self.id_stack)
+        elif self.polar_decomposition_mode == PolarDecompositionMode.HALLEY_DYNAMIC_WEIGHTS:
+          Jrot_mat_nospatial = halley_iterate_QDWH(J_mat_nospatial, self.num_iterations, self.id_stack)
       elif self.tensor_transform_type == TensorTransformType.NONE:
         Jrot_mat_nospatial = J_mat_nospatial
       else:
@@ -194,6 +239,12 @@ class WarpDTI(nn.Module):
       raise NotImplementedError('Tensor transform method not recognized.')
 
     return dti_warped_transformed_lotri
+
+  def on_batch_size_change(self, batch_size):
+    """Update cached objects based on new batch size"""
+    if self.polar_decomposition_mode in [PolarDecompositionMode.HALLEY, PolarDecompositionMode.HALLEY_DYNAMIC_WEIGHTS]:
+      self.id_stack = torch.repeat_interleave(torch.eye(3).unsqueeze(0), batch_size, dim=0).to(self.device)
+
 
 class MseLossDTI(nn.Module):
   """Compare two DTIs and return the spatially averaged squared distance between diffusion tensors,
