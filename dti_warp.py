@@ -203,11 +203,11 @@ class WarpDTI(nn.Module):
         elif self.polar_decomposition_mode == PolarDecompositionMode.NEWTON:
           Jrot_mat_nospatial = newton_iterate[self.newton_iteration_scale_factor](J_mat_nospatial, self.num_iterations)
         elif self.polar_decomposition_mode == PolarDecompositionMode.HALLEY:
-          self.update_id_stack(J_mat_nospatial.shape[0])
-          Jrot_mat_nospatial = halley_iterate(J_mat_nospatial, self.num_iterations, self.id_stack)
+          self.update_id_stack(J_mat_nospatial.shape[0], torch.device('cpu'))
+          Jrot_mat_nospatial = halley_iterate(J_mat_nospatial.cpu(), self.num_iterations, self.id_stack).to(self.device)
         elif self.polar_decomposition_mode == PolarDecompositionMode.HALLEY_DYNAMIC_WEIGHTS:
-          self.update_id_stack(J_mat_nospatial.shape[0])
-          Jrot_mat_nospatial = halley_iterate_QDWH(J_mat_nospatial, self.num_iterations, self.id_stack)
+          self.update_id_stack(J_mat_nospatial.shape[0], torch.device('cpu'))
+          Jrot_mat_nospatial = halley_iterate_QDWH(J_mat_nospatial.cpu(), self.num_iterations, self.id_stack).to(self.device)
       elif self.tensor_transform_type == TensorTransformType.NONE:
         Jrot_mat_nospatial = J_mat_nospatial
       else:
@@ -237,10 +237,12 @@ class WarpDTI(nn.Module):
 
     return dti_warped_transformed_lotri
 
-  def update_id_stack(self, batch_size):
+  def update_id_stack(self, batch_size, device = None):
     """Update cached id_stack based on batch size"""
+    if device is None:
+      device = self.device
     if batch_size != self.last_id_stack_batch_size:
-       self.id_stack = torch.repeat_interleave(torch.eye(3).unsqueeze(0), batch_size, dim=0).to(self.device)
+       self.id_stack = torch.repeat_interleave(torch.eye(3).unsqueeze(0), batch_size, dim=0).to(device)
     self.last_id_stack_batch_size = batch_size
 
 class MseLossDTI(nn.Module):
