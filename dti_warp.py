@@ -255,8 +255,11 @@ class MseLossDTI(nn.Module):
 
     self.symmetrization_multiplier = torch.tensor([1,2,1,2,2,1]).view((1,-1,1,1,1)).to(device)
 
-  def forward(self, b1: torch.Tensor, b2: torch.Tensor) -> torch.Tensor:
+  def forward(self, b1: torch.Tensor, b2: torch.Tensor, weighting: torch.Tensor = None) -> torch.Tensor:
     """Input two batches of DTIs for comparison, each shaped (B,6,H,W,D).
     The channel dimension is interpreted to be the lower triangular entries of
-    the diffusion tensors, in the ordering used by dipy: (Dxx, Dxy, Dyy, Dxz, Dyz, Dzz)"""
+    the diffusion tensors, in the ordering used by dipy: (Dxx, Dxy, Dyy, Dxz, Dyz, Dzz).
+    An optional weighting can be provided, shape (B,1,H,W,D), to weight the squared errors before taking the mean."""
+    if weighting is not None:
+      return (weighting * (((b1-b2)**2) * self.symmetrization_multiplier).sum(dim=1)).mean()
     return (((b1-b2)**2) * self.symmetrization_multiplier).sum(dim=1).mean()
