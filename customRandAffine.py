@@ -142,6 +142,7 @@ class AffineAugmentationDTI:
             dti1_moved= self.do_both(dti1, randomize=False)
             dti2_moved = self.do_both(dti2, randomize=False)
             J = self.do_both.rand_affine_grid.get_transformation_matrix()[:3,:3] # The linear part of the affine transform we are applying
+            J = J.to(dti1)
             dti1_transformed = dt_transform_finite_strain(dti1_moved, J)
             dti2_transformed = dt_transform_finite_strain(dti2_moved, J)
             out_dti1.append(dti1_transformed)
