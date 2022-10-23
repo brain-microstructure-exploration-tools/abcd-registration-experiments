@@ -58,6 +58,97 @@ from monai.data.utils import list_data_collate
 from monai.data import decollate_batch
 
 
+def dt_transform_finite_strain(dti_moved, J):
+    """Transform the tensors of an already spatially warped DTI.
+
+    Args:
+        dti_moved: a DTI, shape (6,H,W,D), that has already been spatially warped by an affine transform
+        J: the linear part of the affine transform that was used to produce dti_moved, shape (3,3)
+
+    Returns:
+        dti_transformed: a DTI, shape (6,H,W,D), that is the original image with its tensors transformed.
+    """
+
+    # Compute the orthogonal component in the polar decomposition of J
+    U, _, Vh = torch.linalg.svd(J, full_matrices=False)
+    Jrot = torch.matmul(U, Vh)
+
+    # Move the spatial dimensions into the front as a single batch dimension
+    # shape goes (6,H,W,D) --> (HWD, 6)
+    dti_moved_batchedspatial = dti_moved.permute((1,2,3,0)).reshape(-1,6)
+
+    # Convert from lower triangular representation of the diffusion matrices to symmetric 3x3 matrix form
+    # shape goes (HWD, 6) --> (HWD, 3, 3)
+    dti_moved_batchedspatial_mat = dti_moved_batchedspatial[:,[[0,1,3],[1,2,4],[3,4,5]]]
+
+    # Apply the transformation
+    dti_transformed_batchedspatial_mat = torch.matmul(
+        Jrot.permute((1,0)).unsqueeze(0),
+        torch.matmul(
+            dti_moved_batchedspatial_mat,
+            Jrot.unsqueeze(0),
+        )
+    )
+
+    # Convert back from symmetric 3x3 matrices to lower triangular form
+    # shape goes (HWD, 3, 3) --> (HWD, 6)
+    dti_transformed_batchedspatial_lotri = dti_transformed_batchedspatial_mat[:,[0, 1, 1, 2, 2, 2],[0, 0, 1, 0, 1, 2]]
+
+    # Move the spatial dimensions back where they belong
+    # shape goes (HWD, 6) --> (6,H,W,D)
+    _,h,w,d = dti_moved.shape
+    dti_transformed = dti_transformed_batchedspatial_lotri.reshape(h,w,d,6).permute((3,0,1,2))
+
+    return dti_transformed
+
+
+
+
+class AffineAugmentationDTI:
+    """Given two batches of DTIs and two corresponding batches of FA images,
+    apply the same random affine transform to all the images.
+
+    Uses the finite strain method to transform diffusion tensors."""
+    def __init__(self, spatial_size, transformation_strength_both):
+        self.spatial_size = spatial_size
+        self.do_both = self.make_transform_of_strength(transformation_strength_both)
+
+    def make_transform_of_strength(self, a):
+        return RandAffineCustom(
+            prob = 1.,
+            mode = 'bilinear',
+            padding_mode = 'zeros',
+            spatial_size = self.spatial_size,
+            cache_grid = True,
+            rotate_range = (a*np.pi/2,)*3,
+            shear_range = (0,)*6, # no shearing
+            translate_range =  [a*s/16 for s in self.spatial_size],
+            scale_range = (1.5**a,),
+            scale_isotropically = True,
+        )
+
+    def __call__(self, first_FA, second_FA, first_DTI, second_DTI):
+        """Input two batches of images, each of shape (b,c,h,w,d)."""
+        out_fa1 = []
+        out_fa2 = []
+        out_dti1 = []
+        out_dti2 = []
+        for fa1, fa2, dti1, dti2 in zip(decollate_batch(first_FA), decollate_batch(second_FA), decollate_batch(first_DTI), decollate_batch(second_DTI)):
+            fa1_transformed = self.do_both(fa1)
+            out_fa1.append(fa1_transformed)
+            fa2_transformed = self.do_both(fa2, randomize=False)
+            out_fa2.append(fa2_transformed)
+
+            dti1_moved= self.do_both(dti1, randomize=False)
+            dti2_moved = self.do_both(dti2, randomize=False)
+            J = self.do_both.rand_affine_grid.get_transformation_matrix()[:3,:3] # The linear part of the affine transform we are applying
+            dti1_transformed = dt_transform_finite_strain(dti1_moved, J)
+            dti2_transformed = dt_transform_finite_strain(dti2_moved, J)
+            out_dti1.append(dti1_transformed)
+            out_dti2.append(dti2_transformed)
+
+        return list_data_collate(out_fa1), list_data_collate(out_fa2), list_data_collate(out_dti1), list_data_collate(out_dti2)
+
 class AffineAugmentation:
     """Given two batches of 3D images, apply the same random affine transform to both, and then one different
     random affine transform to one of them. Useful augmentation for training affine registration models,
