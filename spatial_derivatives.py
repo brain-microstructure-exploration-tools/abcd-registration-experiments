@@ -99,7 +99,7 @@ class DerivativeOfDDF(nn.Module):
 
     Returns:
         the jacobian matrix field with shape :math:`(B,9,H,W,D)`,
-        where the entry (b,c,x,y,z) has the following interpretation for image at batch index b
+        where the entry (b,i,x,y,z) has the following interpretation for image at batch index b
         located at (x,y,z) at each value of i:
             i=0: x-derivative of of the x-component of the transformation
             i=1: y-derivative of of the x-component of the transformation
@@ -128,3 +128,39 @@ class DerivativeOfDDF(nn.Module):
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return spatial_derivative(input, (self.kernel, self.bias))
+
+
+class JacobianOfDDF(nn.Module):
+    r"""Compute the spatial Jacobian determinant of a 3D transformation represented by a displacement vector field.
+    See DerivativeOfDDF for how spatial gradients are approximated.
+
+    Args:
+        input: the input image representing a spatial transformation
+
+    Returns:
+        the jacobian determinant field with shape :math:`(B,1,H,W,D)`,
+
+    Shape:
+        - Input: :math:`(B, 3, H, W, D)`
+        - Output: :math:`(B, 1, H, W, D)`
+    """
+
+    def __init__(self, device='cpu') -> None:
+        super().__init__()
+        self.deriv = DerivativeOfDDF(device = device)
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        b,c,h,w,d = input.shape
+        if c!=3:
+            raise ValueError(f"Channel dimension should be 3 for displacement vector fields; got {c}.")
+
+        # get total derivative matrix
+        D = self.deriv(input).reshape(b,3,3,h,w,d)
+
+        # move spatial dimensions into batch dimension to compute determinant over batch
+        det = D.permute((0,3,4,5,1,2)).reshape(b*h*w*d,3,3).det() # shape is just (bhwd,)
+
+        # move spatial dimensions back out and bring back 1 channel dimension
+        det = det.reshape(b,1,h,w,d)
+
+        return det
