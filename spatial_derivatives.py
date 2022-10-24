@@ -65,7 +65,7 @@ def spatial_derivative(input: torch.Tensor, kernel_bias: Tuple[torch.Tensor, tor
 
 
     if kernel_bias is None:
-        kernel, bias = get_kernel().to(input)
+        kernel, bias = get_kernel_bias().to(input)
     else:
         kernel, bias = kernel_bias
 
@@ -86,7 +86,7 @@ class DerivativeOfDDF(nn.Module):
 
     We use central difference. In order to keep spatial dimensions the same,
     the boundary is padded in "replicate" mode, so the derivatives on the boundary
-    are off by one voxel. That is, the derivatives are firt computed to produce a smaller image,
+    are off by one voxel. That is, the derivatives are first computed to produce a smaller image,
     and then replication padding fixes the image size.
     This is not ideal (a better approach would be to use forward-difference
     or backward difference at the boundaries), but this is much simpler, and it shouldn't
