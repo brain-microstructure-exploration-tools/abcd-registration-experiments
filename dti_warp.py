@@ -263,3 +263,47 @@ class MseLossDTI(nn.Module):
     if weighting is not None:
       return (weighting * (((b1-b2)**2) * self.symmetrization_multiplier).sum(dim=1)).mean()
     return (((b1-b2)**2) * self.symmetrization_multiplier).sum(dim=1).mean()
+
+
+def eig_dti(dti):
+    """Compute the eignsystem from the DTI given in lower triangular form (B,6,H,W,D).
+    Returns eigvals, eigvecs
+
+    eigvals, shape (B,3,H,W,D), is the eigenvalues in ascending order,
+    while eigvecs, shape (B,3,3,H,W,D), is the corresponding eigenvectors.
+    e.g. eigvals[b,2,x,y,z] is the principal eigenvalue at (x,y,z)
+    and eigvecs[b,2,:,x,y,z] is the associated eigenvector
+    """
+
+    b,c,h,w,d = dti.shape
+
+    # move the spatial dimensions into the batch dimension,
+    # and switch from lower traingular form to 3x3 symmetric matrices
+    dti_spatially_batched = dti.permute((0,2,3,4,1)).reshape(-1,6)[:,[[0,1,3],[1,2,4],[3,4,5]]]
+
+    # compute eigensystem
+    eig = torch.linalg.eigh(dti_spatially_batched)
+
+    # move spatial dimensions back out
+    eigvals = eig.eigenvalues.reshape(b,h,w,d,3).permute((0,4,1,2,3))
+    eigvecs = eig.eigenvectors.reshape(b,h,w,d,3,3).permute((0,4,5,1,2,3))
+
+    # eigvals is the eigenvalues in ascending order, while eigvecs is the corresponding eigenvectors
+    # e.g eigvals[b,2,x,y,z] is the principal eigenvalue at (x,y,z)
+    # and eigvecs[b,2,:,x,y,z] is the associated eigenvector
+
+    return eigvals, eigvecs
+
+
+def fa_from_eigenvals(eigvals):
+  """Compute the fractional anisotropy (FA) from the eigenvalues of a DTI image.
+  eigvals image should have shape (B,3,H,W,D)
+  Returns FA image of shape (B,1,H,W,D)
+  """
+
+  lambdahat = eigvals.sum(dim=1, keepdim=True)/3
+  denom_sq = (eigvals**2).sum(dim=1, keepdim=True)
+  numer_sq = ((eigvals - lambdahat)**2).sum(dim=1, keepdim=True)
+  fa = (3/2)**(1/2) * (numer_sq / (denom_sq + 1e-20)).sqrt()
+  return fa
+
