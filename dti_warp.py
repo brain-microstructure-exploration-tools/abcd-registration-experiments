@@ -123,6 +123,9 @@ class WarpDTI(nn.Module):
   Args:
       dti: A batch of diffusion tensor images in lower triangular form.
       ddf: A displacement vector field.
+      mode: The warp interpolation mode. Use bilinear to get gradients; consider using nearest for inference.
+        Note that bilinear actually means trilinear, and note that it's not really a natural way to interpolate
+        over pos def symm bilinear forms like diffusion tensors.
 
   Returns:
       A warped and transformed batch of diffusion tensor images in lower triangular form.
@@ -134,6 +137,7 @@ class WarpDTI(nn.Module):
 
   def __init__(self,
     device='cpu',
+    mode='bilinear',
     tensor_transform_type = TensorTransformType.FINITE_STRAIN,
     polar_decomposition_mode = PolarDecompositionMode.SVD,
     num_iterations : int = None,
@@ -157,7 +161,7 @@ class WarpDTI(nn.Module):
     super().__init__()
 
     # spatial resampling without the tensor transform
-    self.warp = monai.networks.blocks.Warp(mode="bilinear", padding_mode="border")
+    self.warp = monai.networks.blocks.Warp(mode=mode, padding_mode="border")
     self.deriv_ddf = DerivativeOfDDF(device=device)
 
     self.device= device
@@ -307,3 +311,35 @@ def fa_from_eigenvals(eigvals):
   fa = (3/2)**(1/2) * (numer_sq / (denom_sq + 1e-20)).sqrt()
   return fa
 
+def aoe_dti(dti1, dti2, fa1=None):
+  """Given two DTIs and he FA image of the first one, return the AOE similarity measure of the two DTIs.
+  AOE stands for "average overlap of eigenvectors"
+  Sometimes it is also called OVL.
+  See https://pubmed.ncbi.nlm.nih.gov/10893520/
+
+  By construction, 0 < AOE <= 1, where 0 indicates no overlap and 1 indicates complete overlap.
+
+  Args:
+    dti1: DTI image in lower triangular form, shape (B,6,H,W,D)
+    dti2: DTI image in lower triangular form, shape (B,6,H,W,D)
+    fa1: the fa values associated to dti1, shape (B,1,H,W,D); will be computed if not provided
+
+  Returns AOE values, shape (B,)
+  """
+
+  eigvals1, eigvecs1 = eig_dti(dti1)
+  eigvals2, eigvecs2 = eig_dti(dti2)
+
+  if fa1 is None:
+    fa1 = fa_from_eigenvals(eigvals1)
+
+  wm_mask = (fa1>=0.3)[:,0] # shape (B,H,W,D)
+  numerator = ( eigvals1 * eigvals2 * ((eigvecs1 * eigvecs2).sum(dim=2)**2) ).sum(dim=1)
+  denominator = (eigvals1 * eigvals2).sum(dim=1)
+  frac = (numerator/denominator) # shape (B,H,W,D)
+
+  out = []
+  for b,img in enumerate(frac): # loop over batch; img has shape (H,W,D)
+      out.append(img[wm_mask[b]].mean())
+  aoe = torch.stack(out) # shape (B,)
+  return aoe
