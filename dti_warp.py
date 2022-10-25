@@ -286,15 +286,11 @@ def eig_dti(dti):
     dti_spatially_batched = dti.permute((0,2,3,4,1)).reshape(-1,6)[:,[[0,1,3],[1,2,4],[3,4,5]]]
 
     # compute eigensystem
-    eig = torch.linalg.eigh(dti_spatially_batched)
+    eigvals, eigvecs = torch.linalg.eigh(dti_spatially_batched)
 
     # move spatial dimensions back out
-    eigvals = eig.eigenvalues.reshape(b,h,w,d,3).permute((0,4,1,2,3))
-    eigvecs = eig.eigenvectors.reshape(b,h,w,d,3,3).permute((0,4,5,1,2,3))
-
-    # eigvals is the eigenvalues in ascending order, while eigvecs is the corresponding eigenvectors
-    # e.g eigvals[b,2,x,y,z] is the principal eigenvalue at (x,y,z)
-    # and eigvecs[b,2,:,x,y,z] is the associated eigenvector
+    eigvals = eigvals.reshape(b,h,w,d,3).permute((0,4,1,2,3))
+    eigvecs = eigvecs.reshape(b,h,w,d,3,3).permute((0,4,5,1,2,3))
 
     return eigvals, eigvecs
 
