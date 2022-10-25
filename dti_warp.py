@@ -284,7 +284,7 @@ class L2LossDTI(nn.Module):
     The channel dimension is interpreted to be the lower triangular entries of
     the diffusion tensors, in the ordering used by dipy: (Dxx, Dxy, Dyy, Dxz, Dyz, Dzz).
     An optional weighting can be provided, shape (B,1,H,W,D), to weight the squared L2 distances before taking the mean."""
-    L2dists = (((b1-b2)**2) * self.symmetrization_multiplier).sum(dim=1)  +  (b1-b2)[:,[0,2,5]].sum(dim=1)**2
+    L2dists = 2 * (((b1-b2)**2) * self.symmetrization_multiplier).sum(dim=1)  +  (b1-b2)[:,[0,2,5]].sum(dim=1)**2
     if weighting is not None:
       return (weighting * L2dists).mean()
     return L2dists.mean()
