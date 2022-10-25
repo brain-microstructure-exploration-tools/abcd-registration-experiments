@@ -269,6 +269,28 @@ class MseLossDTI(nn.Module):
     return (((b1-b2)**2) * self.symmetrization_multiplier).sum(dim=1).mean()
 
 
+class L2LossDTI(nn.Module):
+  """Compare two DTIs and return the spatially averaged squared L2 distance between diffusion tensors.
+  See https://pubmed.ncbi.nlm.nih.gov/16685843/
+  and https://ieeexplore.ieee.org/document/1315119
+  """
+  def __init__(self, device='cpu') -> None:
+    super().__init__()
+
+    self.symmetrization_multiplier = torch.tensor([1,2,1,2,2,1]).view((1,-1,1,1,1)).to(device)
+
+  def forward(self, b1: torch.Tensor, b2: torch.Tensor, weighting: torch.Tensor = None) -> torch.Tensor:
+    """Input two batches of DTIs for comparison, each shaped (B,6,H,W,D).
+    The channel dimension is interpreted to be the lower triangular entries of
+    the diffusion tensors, in the ordering used by dipy: (Dxx, Dxy, Dyy, Dxz, Dyz, Dzz).
+    An optional weighting can be provided, shape (B,1,H,W,D), to weight the squared L2 distances before taking the mean."""
+    L2dists = (((b1-b2)**2) * self.symmetrization_multiplier).sum(dim=1)  +  (b1-b2)[:,[0,2,5]].sum(dim=1)**2
+    if weighting is not None:
+      return (weighting * L2dists).mean()
+    return L2dists.mean()
+
+
+
 def eig_dti(dti):
     """Compute the eignsystem from the DTI given in lower triangular form (B,6,H,W,D).
     Returns eigvals, eigvecs
