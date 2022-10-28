@@ -5,7 +5,7 @@ from enum import Enum
 from collections import namedtuple
 from pathlib import Path
 from typing import Union
-from dti_warp import WarpDTI, MseLossDTI, TensorTransformType, PolarDecompositionMode
+from dti_warp import WarpDTI, L2LossDTI, TensorTransformType, PolarDecompositionMode
 from util import ComposeDDF
 
 
