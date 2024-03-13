@@ -18,6 +18,12 @@ from dipy.data import get_fnames
 
 parser = argparse.ArgumentParser(description='performs non-linear registration between a source and target dwi')
 
+# Optional arguments
+parser.add_argument('--scale', default=1500, type=int, help='scaling to correct for diffusivity units')
+parser.add_argument('--iters', default=6, type=int, help='number of iterations for diffeomorphic registration')
+parser.add_argument('--tol', default=0.002, type=float, help='convergence critera for diffeomorphic registration')
+
+# Positional arguments next
 parser.add_argument('source', type=str, help='path to a source dwi')
 parser.add_argument('source_mask', type=str, help='path to a brain mask for the source dwi')
 parser.add_argument('target', type=str, help='path to a target dwi')
@@ -25,6 +31,12 @@ parser.add_argument('target_mask', type=str, help='path to a brain mask for the 
 parser.add_argument('output_dir', type=str, help='path to a folder for saving output of registration')
 
 args = parser.parse_args()
+
+diffusivity_scale = args.scale
+num_iters = args.iters
+tolerance = args.tol
+
+print(diffusivity_scale)
 
 source_path = Path(os.path.abspath(args.source))
 source_without_ext = str(source_path)[:str(source_path).rfind(''.join(source_path.suffixes))]
@@ -104,10 +116,10 @@ save_nifti(target_out_dti_filename, target_dti_lotri, target_affine, target_img.
 print("\n  Preprocessing dti volumes...")
 
 # First we have to scale the diffusivity values to make the units compatible with dti-tk (mean diffusivity for CSF around 3)
-# For now I have checked a couple of subjects and found MD to be around 0.002 --> so I set the scale to 1500
+# For now I have checked a couple of subjects and found MD to be around 0.002 --> so I set the scale to 1500 as default
 # This should be revisited for the population and for different scanners (possible not hardcoded if we have tissue seg)
-subprocess.run(['TVtool', '-in', source_out_dti_filename, '-scale', '1500', '-out', source_out_dti_filename], stdout=subprocess.DEVNULL)
-subprocess.run(['TVtool', '-in', target_out_dti_filename, '-scale', '1500', '-out', target_out_dti_filename], stdout=subprocess.DEVNULL)
+subprocess.run(['TVtool', '-in', source_out_dti_filename, '-scale', str(diffusivity_scale), '-out', source_out_dti_filename], stdout=subprocess.DEVNULL)
+subprocess.run(['TVtool', '-in', target_out_dti_filename, '-scale', str(diffusivity_scale), '-out', target_out_dti_filename], stdout=subprocess.DEVNULL)
 
 # Set origin to [0,0,0] as recommended by dti-tk documentation
 subprocess.run(['TVAdjustVoxelspace', '-in', source_out_dti_filename, '-origin', '0', '0', '0'], stdout=subprocess.DEVNULL)
@@ -141,6 +153,6 @@ print("    Diffeomorphic...")
 diffeo_log_path = '%s/diffeo_log' %(output_path)
 diffeo_log = open(diffeo_log_path, 'w')
 affine_filename = '%s/source_dti_aff.nii.gz' %(output_path)
-subprocess.run(['dti_diffeomorphic_reg', target_out_dti_filename, affine_filename, working_target_mask_path, '1', '6', '0.002'], stdout=diffeo_log)
+subprocess.run(['dti_diffeomorphic_reg', target_out_dti_filename, affine_filename, working_target_mask_path, '1', str(num_iters), str(tolerance)], stdout=diffeo_log)
 
 print()
