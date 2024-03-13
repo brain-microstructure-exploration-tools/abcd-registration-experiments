@@ -112,7 +112,7 @@ subprocess.run(['TVtool', '-in', target_out_dti_filename, '-scale', '1500', '-ou
 # Set origin to [0,0,0] as recommended by dti-tk documentation
 subprocess.run(['TVAdjustVoxelspace', '-in', source_out_dti_filename, '-origin', '0', '0', '0'], stdout=subprocess.DEVNULL)
 subprocess.run(['SVAdjustVoxelspace', '-in', working_source_mask_path, '-origin', '0', '0', '0'], stdout=subprocess.DEVNULL)
-subprocess.run(['TVAdjustVoxelspace', '-in', source_out_dti_filename, '-origin', '0', '0', '0'], stdout=subprocess.DEVNULL)
+subprocess.run(['TVAdjustVoxelspace', '-in', target_out_dti_filename, '-origin', '0', '0', '0'], stdout=subprocess.DEVNULL)
 subprocess.run(['SVAdjustVoxelspace', '-in', working_target_mask_path, '-origin', '0', '0', '0'], stdout=subprocess.DEVNULL)
 
 # Dimensions must be powers of 2 as per dti-tk documentation (resample voxel size accordingly)
