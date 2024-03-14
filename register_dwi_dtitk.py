@@ -36,8 +36,6 @@ diffusivity_scale = args.scale
 num_iters = args.iters
 tolerance = args.tol
 
-print(diffusivity_scale)
-
 source_path = Path(os.path.abspath(args.source))
 source_without_ext = str(source_path)[:str(source_path).rfind(''.join(source_path.suffixes))]
 source_bval_path = Path('%s.bval' %(source_without_ext))
