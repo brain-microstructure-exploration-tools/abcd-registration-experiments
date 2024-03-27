@@ -114,13 +114,23 @@ save_nifti(target_out_fa_filename, target_tenfit.fa, target_affine, target_img.h
 ants_source_im = ants.image_read(source_out_fa_filename)
 ants_target_im = ants.image_read(target_out_fa_filename)
 
-diffeo = ants.registration(fixed=ants_target_im, moving=ants_source_im, type_of_transform='SyN')
+diffeo = ants.registration(fixed=ants_target_im, moving=ants_source_im, type_of_transform='SyNRA', outprefix='reg_', write_composite_transform=True)
+
+print(diffeo['fwdtransforms'])
+
 warped_image = ants.apply_transforms(fixed=ants_target_im, moving=ants_source_im, transformlist=diffeo['fwdtransforms'])
 
 out_image_filename = '%s/warped_fa.nii.gz' %(output_path)
 out_warp_filename = '%s/diffeo.nii.gz' %(output_path)
+out_inverse_warp_filename = '%s/diffeo_inverse.nii.gz' %(output_path)
 
 ants.image_write(warped_image, out_image_filename)
 
-warp = ants.image_read(diffeo['fwdtransforms'][0])
-ants.image_write(warp, out_warp_filename)
+#warp = ants.image_read(diffeo['fwdtransforms'][0])
+#ants.image_write(warp, out_warp_filename)
+
+#warp = ants.transform_read(diffeo['fwdtransforms'][0])
+#ants.image_write(warp, out_warp_filename)
+
+#inverse_warp = ants.image_read(diffeo['invtransforms'][1])
+#ants.image_write(inverse_warp, out_inverse_warp_filename)
