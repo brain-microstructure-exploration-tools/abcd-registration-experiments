@@ -132,4 +132,8 @@ if __name__=="__main__":
   fiber_bundle_T_path = args.bundle2
   use_every_n_fibers = args.use_every_n
 
+  # Prevent a divide by zero error later and avoid negative values 
+  if (use_every_n_fibers <= 0):
+    use_every_n_fibers = 1
+
   main(fiber_bundle_M_path, fiber_bundle_T_path, use_every_n_fibers) 
