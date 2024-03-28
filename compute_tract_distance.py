@@ -44,6 +44,7 @@ def main(fiber_bundle_M_path, fiber_bundle_T_path, use_every_n_fibers):
 
   # These are all the points which make up the fibers (streamlines) of fiber bundle M
   fiber_bundle_M_points = fiber_bundle_M.GetPoints()
+  fiber_bundle_M.GetLines().InitTraversal()
   idListM = vtk.vtkIdList()
 
   # These are all the points which make up fiber bundle T
