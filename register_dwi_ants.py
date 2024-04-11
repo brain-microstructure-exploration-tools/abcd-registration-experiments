@@ -7,14 +7,6 @@ import os
 from pathlib import Path
 import subprocess
 
-from dipy.io.image import load_nifti, save_nifti
-from dipy.io.gradients import read_bvals_bvecs
-from dipy.core.gradients import gradient_table
-
-import dipy.reconst.dti as dti
-
-from dipy.data import get_fnames
-
 import ants
 
 # === Parse args ===
@@ -62,75 +54,29 @@ if not target_mask_path.exists():
 if not output_path.exists():
   os.mkdir(str(output_path))
   
-# Copy the masks into the output directory so we can modify/resample
-working_source_mask_path = '%s/source_mask.nii.gz' %(output_path)
-subprocess.run(['cp', source_mask_path, working_source_mask_path])
-
-working_target_mask_path = '%s/target_mask.nii.gz' %(output_path)
-subprocess.run(['cp', target_mask_path, working_target_mask_path])
-  
-# === Generate dti volumes  === (this could be made generic so we could plug in different packages/methods)
-
 print("\n  Generating dti volumes...")
 
-source_data, source_affine, source_img = load_nifti(str(source_path), return_img=True)
-source_bvals, source_bvecs = read_bvals_bvecs(str(source_bval_path), str(source_bvec_path))
+script_path = Path(os.path.realpath(__file__))
+generate_dti_script = '%s/reconstruct_dti.py' %(str(script_path.parent))
 
-source_gtab = gradient_table(source_bvals, source_bvecs)
-
-source_mask_data, source_mask_affine, source_mask_img = load_nifti(source_mask_path, return_img=True)
-
-source_tenmodel = dti.TensorModel(source_gtab)
-source_tenfit = source_tenmodel.fit(source_data, mask=source_mask_data)
-
-source_dti_lotri = source_tenfit.lower_triangular()
-
-source_out_dti_filename = '%s/source_dti.nii.gz' %(output_path)
-save_nifti(source_out_dti_filename, source_dti_lotri, source_affine, source_img.header)
-
-source_out_fa_filename = '%s/source_fa.nii.gz' %(output_path)
-save_nifti(source_out_fa_filename, source_tenfit.fa, source_affine, source_img.header)
-
-target_data, target_affine, target_img = load_nifti(str(target_path), return_img=True)
-target_bvals, target_bvecs = read_bvals_bvecs(str(target_bval_path), str(target_bvec_path))
-
-target_gtab = gradient_table(target_bvals, target_bvecs)
-
-target_mask_data, target_mask_affine, target_mask_img = load_nifti(target_mask_path, return_img=True)
-
-target_tenmodel = dti.TensorModel(target_gtab)
-target_tenfit = target_tenmodel.fit(target_data, mask=target_mask_data)
-
-target_dti_lotri = target_tenfit.lower_triangular()
-
-target_out_dti_filename = '%s/target_dti.nii.gz' %(output_path)
-save_nifti(target_out_dti_filename, target_dti_lotri, target_affine, target_img.header)
-
-target_out_fa_filename = '%s/target_fa.nii.gz' %(output_path)
-save_nifti(target_out_fa_filename, target_tenfit.fa, target_affine, target_img.header)
+subprocess.run(['python', generate_dti_script, str(source_path), str(source_mask_path), str(output_path), 'source_dti.nii.gz'], stdout=subprocess.DEVNULL)
+subprocess.run(['python', generate_dti_script, str(target_path), str(target_mask_path), str(output_path), 'target_dti.nii.gz'], stdout=subprocess.DEVNULL)
 
 # === Now get into the ANTs registration ===
 
-ants_source_im = ants.image_read(source_out_fa_filename)
-ants_target_im = ants.image_read(target_out_fa_filename)
+print("\n  Registering source fa to target fa...")
 
-diffeo = ants.registration(fixed=ants_target_im, moving=ants_source_im, type_of_transform='SyNRA', outprefix='reg_', write_composite_transform=True)
+source_fa_filename = '%s/source_dti_fa.nii.gz' %(str(output_path))
+target_fa_filename = '%s/target_dti_fa.nii.gz' %(str(output_path))
 
-print(diffeo['fwdtransforms'])
+ants_source_im = ants.image_read(source_fa_filename)
+ants_target_im = ants.image_read(target_fa_filename)
+
+out_prefix = '%s/diffeo_' %(str(output_path))
+
+diffeo = ants.registration(fixed=ants_target_im, moving=ants_source_im, type_of_transform='SyNRA', outprefix=out_prefix, write_composite_transform=True)
 
 warped_image = ants.apply_transforms(fixed=ants_target_im, moving=ants_source_im, transformlist=diffeo['fwdtransforms'])
 
 out_image_filename = '%s/warped_fa.nii.gz' %(output_path)
-out_warp_filename = '%s/diffeo.nii.gz' %(output_path)
-out_inverse_warp_filename = '%s/diffeo_inverse.nii.gz' %(output_path)
-
 ants.image_write(warped_image, out_image_filename)
-
-#warp = ants.image_read(diffeo['fwdtransforms'][0])
-#ants.image_write(warp, out_warp_filename)
-
-#warp = ants.transform_read(diffeo['fwdtransforms'][0])
-#ants.image_write(warp, out_warp_filename)
-
-#inverse_warp = ants.image_read(diffeo['invtransforms'][1])
-#ants.image_write(inverse_warp, out_inverse_warp_filename)
