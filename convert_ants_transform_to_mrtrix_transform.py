@@ -47,7 +47,7 @@ for d in range(0, 3):
     ants.image_write(cur_warped_image, out_image_filename)
 
 # Fix warp
-corrected_warp = '%s/%s.mif' %(output_dir, out_name)
+corrected_warp = '%s/%s.nii.gz' %(output_dir, out_name)
 warp_filename = '%s/mrtrix_warp[].nii.gz' %(output_dir)
 subprocess.run(['warpcorrect', warp_filename, corrected_warp, '-marker', '2147483647', '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
