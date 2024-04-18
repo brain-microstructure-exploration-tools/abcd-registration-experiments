@@ -14,6 +14,8 @@ import dipy.reconst.dti as dti
 
 from dipy.data import get_fnames
 
+import process_dwi
+
 # === Parse args ===
 
 parser = argparse.ArgumentParser(description='Reconstructs dti from given dti')
@@ -51,24 +53,12 @@ if not dwi_mask_path.exists():
 if not output_path.exists():
   os.mkdir(str(output_path))
 
-# === Generate dti volumes  === (this could be made generic so we could plug in different packages/methods)
-
-dwi_data, dwi_affine, dwi_img = load_nifti(str(dwi_path), return_img=True)
-dwi_bvals, dwi_bvecs = read_bvals_bvecs(str(dwi_bval_path), str(dwi_bvec_path))
-
-dwi_gtab = gradient_table(dwi_bvals, dwi_bvecs)
-
-dwi_mask_data, dwi_mask_affine, dwi_mask_img = load_nifti(dwi_mask_path, return_img=True)
-
-tenmodel = dti.TensorModel(dwi_gtab)
-tenfit = tenmodel.fit(dwi_data, mask=dwi_mask_data)
-
-dti_lotri = tenfit.lower_triangular()
+dwi_info, dti_lotri, fa_image = process_dwi.reconstruct_dti(dwi_path, dwi_bval_path, dwi_bvec_path, dwi_mask_path)
 
 out_dti_filename = Path('%s/%s' %(output_path, output_name))
-save_nifti(str(out_dti_filename), dti_lotri, dwi_affine, dwi_img.header)
+save_nifti(str(out_dti_filename), dti_lotri, dwi_info['affine'], dwi_info['header'])
 
 if (save_fa):
     filename_without_ext = str(out_dti_filename)[:str(out_dti_filename).rfind(''.join(out_dti_filename.suffixes))]
     out_fa_filename = '%s_fa.nii.gz' %(filename_without_ext)
-    save_nifti(out_fa_filename, tenfit.fa, dwi_affine, dwi_img.header)
+    save_nifti(out_fa_filename, dti_lotri, dwi_info['affine'], dwi_info['header'])
