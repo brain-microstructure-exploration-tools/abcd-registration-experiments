@@ -41,7 +41,7 @@ def fiber_tract_distance(fiber_tract_M_tck_path, fiber_tract_T_tck_path, percent
     num_fibers_M = int(np.ceil(len(fiber_tract_M_line_ends) * percent_sample_fibers))
     num_fibers_T = int(np.ceil(len(fiber_tract_T_line_ends) * percent_sample_fibers))
 
-    np.random.seed(0)
+    #np.random.seed(0)
     range_fibers_M = np.arange(0, len(fiber_tract_M_line_ends))
     sampling_fibers_M = np.random.choice(range_fibers_M, size=num_fibers_M, replace=False)
 
@@ -83,5 +83,5 @@ def fiber_tract_distance(fiber_tract_M_tck_path, fiber_tract_T_tck_path, percent
 
     first_part = np.sum(np.min(pairwise_distances_M_and_T, axis=1))
     second_part = np.sum(np.min(pairwise_distances_T_and_M, axis=1))
-    
+
     return (1.0 / (num_fibers_M + num_fibers_T)) * (first_part + second_part)
