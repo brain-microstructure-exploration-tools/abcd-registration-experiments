@@ -11,8 +11,6 @@ def convert_ants_transform_to_mrtrix_transform(target_image, ants_transform):
 
     with TemporaryDirectory() as temp_dir:
 
-        print(temp_dir)
-
         identity_warp = '%s/identity_warp[].nii.gz' %(str(temp_dir))
 
         # Create identity warp
