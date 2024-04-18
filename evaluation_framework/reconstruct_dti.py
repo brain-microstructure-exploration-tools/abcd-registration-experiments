@@ -61,4 +61,4 @@ save_nifti(str(out_dti_filename), dti_lotri, dwi_info['affine'], dwi_info['heade
 if (save_fa):
     filename_without_ext = str(out_dti_filename)[:str(out_dti_filename).rfind(''.join(out_dti_filename.suffixes))]
     out_fa_filename = '%s_fa.nii.gz' %(filename_without_ext)
-    save_nifti(out_fa_filename, dti_lotri, dwi_info['affine'], dwi_info['header'])
+    save_nifti(out_fa_filename, fa_image, dwi_info['affine'], dwi_info['header'])
