@@ -8,6 +8,9 @@ from pathlib import Path
 import subprocess
 
 import ants
+from dipy.io.image import save_nifti
+
+import process_dwi
 
 # === Parse args ===
 
@@ -56,21 +59,21 @@ if not output_path.exists():
   
 print("\n  Generating dti volumes...")
 
-script_path = Path(os.path.realpath(__file__))
-generate_dti_script = '%s/reconstruct_dti.py' %(str(script_path.parent))
+source_dwi_info, source_dti_lotri, source_fa_image = process_dwi.reconstruct_dti(source_path, source_bval_path, source_bvec_path, source_mask_path)
+target_dwi_info, target_dti_lotri, target_fa_image = process_dwi.reconstruct_dti(target_path, target_bval_path, target_bvec_path, target_mask_path)
 
-subprocess.run(['python', generate_dti_script, str(source_path), str(source_mask_path), str(output_path), 'source_dti.nii.gz'], stdout=subprocess.DEVNULL)
-subprocess.run(['python', generate_dti_script, str(target_path), str(target_mask_path), str(output_path), 'target_dti.nii.gz'], stdout=subprocess.DEVNULL)
+# Save the fa images
+out_source_fa_filename = Path('%s/source_fa.nii.gz' %(output_path))
+out_target_fa_filename = Path('%s/target_fa.nii.gz' %(output_path))
+save_nifti(str(out_source_fa_filename), source_fa_image, source_dwi_info['affine'], source_dwi_info['header'])
+save_nifti(str(out_target_fa_filename), target_fa_image, target_dwi_info['affine'], target_dwi_info['header'])
 
 # === Now get into the ANTs registration ===
 
 print("\n  Registering source fa to target fa...")
 
-source_fa_filename = '%s/source_dti_fa.nii.gz' %(str(output_path))
-target_fa_filename = '%s/target_dti_fa.nii.gz' %(str(output_path))
-
-ants_source_im = ants.image_read(source_fa_filename)
-ants_target_im = ants.image_read(target_fa_filename)
+ants_source_im = ants.image_read(str(out_source_fa_filename))
+ants_target_im = ants.image_read(str(out_target_fa_filename))
 
 out_prefix = '%s/diffeo_' %(str(output_path))
 
