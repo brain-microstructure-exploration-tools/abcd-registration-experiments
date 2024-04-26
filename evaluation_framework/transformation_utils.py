@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 
 import nibabel as nib
 import ants
+import h5py
 
 def convert_ants_transform_to_mrtrix_transform(target_image, ants_transform):
 
@@ -28,7 +29,7 @@ def convert_ants_transform_to_mrtrix_transform(target_image, ants_transform):
 
             cur_ants_source_im = ants.image_read(cur_identity_warp)
             
-            cur_warped_image = ants.apply_transforms(fixed=ants_target_im, moving=cur_ants_source_im, transformlist=ants_transform, defaultvalue=2147483647)
+            cur_warped_image = ants.apply_transforms(fixed=ants_target_im, moving=cur_ants_source_im, transformlist=str(ants_transform), defaultvalue=2147483647)
 
             out_image_filename = '%s/mrtrix_warp%d.nii.gz' %(str(temp_dir), d)
             ants.image_write(cur_warped_image, out_image_filename)
@@ -43,3 +44,9 @@ def convert_ants_transform_to_mrtrix_transform(target_image, ants_transform):
 def warp_fiber_tract(in_fiber_tract_path, mrtrix_warp_path, out_fiber_tract_path):
 
     subprocess.run(['tcktransform', in_fiber_tract_path, mrtrix_warp_path, out_fiber_tract_path, '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def write_hd5_transform(hd5_file_object, out_name):
+
+    with h5py.File(str(out_name), 'w') as hd5_out_file:
+        for obj in hd5_file_object.keys():
+            hd5_file_object.copy(obj, hd5_out_file)
