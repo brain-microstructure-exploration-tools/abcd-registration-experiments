@@ -8,30 +8,12 @@ import nibabel as nib
 import transformation_utils
 import fiber_measures
 
-def pairwise_evaluation_ants(source_fa, target_fa, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers=0.1, num_repeats=1):
-
-    ### Run the registration ###
-
-    ants_source_im = ants.image_read(str(source_fa))
-    ants_target_im = ants.image_read(str(target_fa))
-
-    out_prefix = '%s/diffeo_' %(str(output_path))
-
-    diffeo = ants.registration(fixed=ants_target_im, moving=ants_source_im, type_of_transform='SyNRA', outprefix=out_prefix, write_composite_transform=True)
-
-    warped_image = ants.apply_transforms(fixed=ants_target_im, moving=ants_source_im, transformlist=diffeo['fwdtransforms'])
-
-    # Also write out the deformed fa
-    out_image_filename = '%s/warped_fa.nii.gz' %(str(output_path))
-    ants.image_write(warped_image, out_image_filename)
-
-    forward_transform = '%s/diffeo_Composite.h5' %(str(output_path))
-    inverse_transform = '%s/diffeo_InverseComposite.h5' %(str(output_path))
+def pairwise_evaluation_ants(target_fa_path, forward_diffeo_path, inverse_diffeo_path, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers=0.1, num_repeats=1):
 
     ### Convert the transformations ###
 
-    mrtrix_forward_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_fa, forward_transform)
-    mrtrix_inverse_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_fa, inverse_transform)
+    mrtrix_forward_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_fa_path, forward_diffeo_path)
+    mrtrix_inverse_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_fa_path, inverse_diffeo_path)
 
     out_forward_warp_filename = '%s/mrtrix_forward_diffeo.nii.gz' %(str(output_path))
     out_inverse_warp_filename = '%s/mrtrix_inverse_diffeo.nii.gz' %(str(output_path))
