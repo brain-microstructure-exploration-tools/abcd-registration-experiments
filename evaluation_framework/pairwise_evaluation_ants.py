@@ -1,8 +1,7 @@
 # Evaluates ants pairwise registration between a source and a target dwi via fa images
 # Currently there are several temporary files created and not deleted, and hardcoded filenames -- this may be good enough for our own evaluation purposes -- can revisit
-# The source_fiber_dir and target_fiber_dir assume the same number of fiber tracts with the same names (and in both tck and vtk format)
+# The source_fiber_dir and target_fiber_dir assume the same number of fiber tracts with the same names in tck format
 #
-# Relies on scripts in the same directory: register_dwi_ants.py, convert_tck_to_vtk.py, compute_tract_distance.py
 
 import argparse
 from pathlib import Path
@@ -10,7 +9,10 @@ import subprocess
 import os
 import glob
 
-import ants
+from dipy.io.image import load_nifti, save_nifti
+
+import process_dwi
+import pairwise_evaluation
 
 parser = argparse.ArgumentParser(description='Performs pairwise dwi registration using ANTS and evaluates the accuracy via fiber tract distance (more metrics to be implemented)')
 
@@ -61,66 +63,20 @@ if not target_path.exists() or not target_bval_path.exists() or not target_bvec_
 if not target_mask_path.exists():
     raise FileNotFoundError(f"File {target_mask_path} not found")
 
-# === Call the script to register the source and target fa images to generate the diffeormorphism ===
+# === Generate dti and fa images ===
 
-script_path = Path(os.path.realpath(__file__))
-register_ants_script = '%s/register_dwi_ants.py' %(str(script_path.parent))
+print("\n  Processing dwi and computing fa images...")
+
+source_dwi_info, source_dti_lotri, source_fa_image = process_dwi.reconstruct_dti(source_path, source_bval_path, source_bvec_path, source_mask_path)
+target_dwi_info, target_dti_lotri, target_fa_image = process_dwi.reconstruct_dti(target_path, target_bval_path, target_bvec_path, target_mask_path)
+
+# Save the fa images
+out_source_fa_filename = Path('%s/source_fa.nii.gz' %(output_path))
+out_target_fa_filename = Path('%s/target_fa.nii.gz' %(output_path))
+save_nifti(str(out_source_fa_filename), source_fa_image, source_dwi_info['affine'], source_dwi_info['header'])
+save_nifti(str(out_target_fa_filename), target_fa_image, target_dwi_info['affine'], target_dwi_info['header'])
 
 print("\n  Running ants registration...")
 
-subprocess.run(['python', register_ants_script, str(source_path), str(source_mask_path), str(target_path), str(target_mask_path), str(output_path)], stdout=subprocess.DEVNULL)
+pairwise_evaluation.pairwise_evaluation_ants(out_source_fa_filename, out_target_fa_filename, source_fiber_path, target_fiber_path, output_path)
 
-# === Convert ants transformations to mrtrix format ===
-convert_transform_script = '%s/convert_ants_transform_to_mrtrix_transform.py' %(str(script_path.parent))
-
-forward_transform = '%s/diffeo_Composite.h5' %(str(output_path))
-inverse_transform = '%s/diffeo_InverseComposite.h5' %(str(output_path))
-
-print("\n  Converting transformations to mrtrix...")
-
-subprocess.run(['python', convert_transform_script, '--out_name', 'mrtrix_warp_forward', str(target_mask_path), forward_transform, str(output_path)], stdout=subprocess.DEVNULL)
-subprocess.run(['python', convert_transform_script, '--out_name', 'mrtrix_warp_inverse', str(target_mask_path), inverse_transform, str(output_path)], stdout=subprocess.DEVNULL)
-
-# === Warp the fibers using mtrtrix ===  
-fiber_out_path = Path('%s/warped_fibers' %(str(output_path)))
-
-if not fiber_out_path.exists():
-    os.mkdir(str(fiber_out_path))
-
-all_source_fibers = sorted(glob.glob(str(source_fiber_path) + '/*.tck'))
-all_target_fibers = sorted(glob.glob(str(target_fiber_path) + '/*.tck'))
-
-fiber_distance_path = Path('%s/fiber_distances' %(str(output_path)))
-
-if not fiber_distance_path.exists():
-    os.mkdir(str(fiber_distance_path))
-
-convert_to_vtk_script = '%s/convert_tck_to_vtk.py' %(str(script_path.parent)) 
-fiber_distance_script = '%s/compute_tract_distance.py' %(str(script_path.parent))
-
-print()
-
-for i in range(0, len(all_source_fibers)):
- 
-    cur_fiber = all_source_fibers[i]
-
-    warped_fiber = '%s/%s_warped.tck' %(str(fiber_out_path), Path(cur_fiber).stem)
-    mrtrix_inverse = '%s/mrtrix_warp_inverse.nii.gz' %(str(output_path))
-
-    subprocess.run(['tcktransform', cur_fiber, mrtrix_inverse, warped_fiber, '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    # Convert the warped fibers to vtk
-    subprocess.run(['python', convert_to_vtk_script, str(fiber_out_path), str(fiber_out_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    # === Compute fiber tract distance ===
-    cur_distance_log_path = '%s/%s_distance.txt' %(str(fiber_distance_path), Path(cur_fiber).stem)
-    cur_distance_log = open(cur_distance_log_path, 'w')
-    warped_fiber_vtk = '%s/%s_warped.vtk' %(str(fiber_out_path), Path(cur_fiber).stem)
-    target_fiber_vtk = '%s/%s.vtk' %(str(target_fiber_path), Path(all_target_fibers[i]).stem)
-
-    print("  Computing fiber tract distance " + str(i+1) + " of " + str(len(all_source_fibers)))
-
-    subprocess.run(['python', fiber_distance_script, '--percent_sample_fibers', str(percent_sample_fibers), warped_fiber_vtk, target_fiber_vtk], stdout=cur_distance_log)
-    cur_distance_log.close()
-
-print()
