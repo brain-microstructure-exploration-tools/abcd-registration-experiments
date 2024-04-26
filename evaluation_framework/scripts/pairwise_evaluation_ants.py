@@ -9,19 +9,19 @@ import os
 import glob
 
 import nibabel as nib
-from dipy.io.image import load_nifti, save_nifti
+from dipy.io.image import save_nifti
 import h5py
 
 import process_dwi
-import pairwise_evaluation
 import dwi_registration
 import transformation_utils
+import pairwise_evaluation
 
 parser = argparse.ArgumentParser(description='Performs pairwise dwi registration using ANTS and evaluates the accuracy via fiber tract distance (more metrics to be implemented)')
 
 # Optional arguments
 parser.add_argument('--percent_sample_fibers', default=0.1, type=float, help='randomly sample a percentage of fiber streamlines')
-parser.add_argument('--num_repeats', type=int, help='the number of times to repeat the fiber tract distance measurement')
+parser.add_argument('--num_repeats', default=1, type=int, help='the number of times to repeat the fiber tract distance measurement')
 
 # Positional arguments next
 parser.add_argument('source', type=str, help='path to a source dwi')
@@ -35,6 +35,7 @@ parser.add_argument('output_dir', type=str, help='path to a folder for saving ou
 args = parser.parse_args()
 
 percent_sample_fibers = args.percent_sample_fibers
+num_repeats = args.num_repeats
 
 source_path = Path(os.path.abspath(args.source))
 source_without_ext = str(source_path)[:str(source_path).rfind(''.join(source_path.suffixes))]
@@ -96,5 +97,7 @@ transformation_utils.write_hd5_transform(inverse_diffeo, inverse_diffeo_filename
 
 print("\n  Running ants evalutation...")
 
-pairwise_evaluation.pairwise_evaluation_ants(out_target_fa_filename, forward_diffeo_filename, inverse_diffeo_filename, source_fiber_path, target_fiber_path, output_path)
+pairwise_evaluation.pairwise_evaluation_ants(out_target_fa_filename, forward_diffeo_filename, inverse_diffeo_filename, \
+                                             source_fiber_path, target_fiber_path, output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats)
 
+print()
