@@ -4,6 +4,8 @@ from pathlib import Path
 import glob
 import subprocess
 
+import fiber_tract_io
+
 parser = argparse.ArgumentParser(description='Converts a directory of tck files to vtk format')
 
 parser.add_argument('in_dir', type=str, help='path to input directory with tck files')
@@ -25,8 +27,8 @@ if (len(input_tck) == 0):
   
 for tck_file in input_tck:
   
-  #print(tck_file)
   out_filename = '%s/%s.vtk' %(str(out_dir), Path(tck_file).stem)
   
-  subprocess.run(['tckconvert', tck_file, out_filename, '-force'], stdout=subprocess.DEVNULL)
+  tck_header, vertices, line_starts, line_ends = fiber_tract_io.read_tck(tck_file)
   
+  fiber_tract_io.write_vtk(vertices, line_starts, line_ends, out_filename)
