@@ -1,7 +1,6 @@
 # Evaluates ants pairwise registration between a source and a target dwi via fa images
 # Currently there are several temporary files created and not deleted, and hardcoded filenames -- this may be good enough for our own evaluation purposes -- can revisit
 # The source_fiber_dir and target_fiber_dir assume the same number of fiber tracts with the same names in tck format
-#
 
 import argparse
 from pathlib import Path
@@ -9,10 +8,13 @@ import subprocess
 import os
 import glob
 
-from dipy.io.image import load_nifti, save_nifti
+import nibabel as nib
+import h5py
 
 import process_dwi
 import pairwise_evaluation
+import dwi_registration
+import transformation_utils
 
 parser = argparse.ArgumentParser(description='Performs pairwise dwi registration using ANTS and evaluates the accuracy via fiber tract distance (more metrics to be implemented)')
 
@@ -78,5 +80,20 @@ save_nifti(str(out_target_fa_filename), target_fa_image, target_dwi_info['affine
 
 print("\n  Running ants registration...")
 
-pairwise_evaluation.pairwise_evaluation_ants(out_source_fa_filename, out_target_fa_filename, source_fiber_path, target_fiber_path, output_path)
+warped_fa, forward_diffeo, inverse_diffeo = dwi_registration.register_ants_fa(out_source_fa_filename, out_target_fa_filename)
+
+# Write deformed fa
+out_image_path = Path('%s/warped_fa.nii.gz' %(str(output_path)))
+nib.save(warped_fa, str(out_image_path))
+
+# Write hd5 transforms
+forward_diffeo_filename = Path('%s/diffeo_Composite.h5' %(str(output_path)))
+inverse_diffeo_filename = Path('%s/diffeo_InverseComposite.h5' %(str(output_path)))
+
+transformation_utils.write_hd5_transform(forward_diffeo, forward_diffeo_filename)
+transformation_utils.write_hd5_transform(inverse_diffeo, inverse_diffeo_filename)
+
+print("\n  Running ants evalutation...")
+
+pairwise_evaluation.pairwise_evaluation_ants(out_target_fa_filename, forward_diffeo_filename, inverse_diffeo_filename, source_fiber_path, target_fiber_path, output_path)
 
