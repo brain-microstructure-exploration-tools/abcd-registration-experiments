@@ -32,9 +32,6 @@ def mean_closest_fiber_distance(points_m, points_t):
 
 # Fiber tract distance defined by eqn (3) https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9273049/
 def fiber_tract_distance(fiber_tract_M_tck_path, fiber_tract_T_tck_path, percent_sample_fibers=0.5, num_repeats=1):
-  
-    print(percent_sample_fibers)
-    print(num_repeats)
 
     # Read tck fiber bundles
     fiber_tract_M_header, fiber_tract_M_points, fiber_tract_M_line_starts, fiber_tract_M_line_ends = fiber_tract_io.read_tck(fiber_tract_M_tck_path)
