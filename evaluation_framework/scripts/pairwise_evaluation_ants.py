@@ -9,6 +9,7 @@ import os
 import glob
 
 import nibabel as nib
+from dipy.io.image import load_nifti, save_nifti
 import h5py
 
 import process_dwi
