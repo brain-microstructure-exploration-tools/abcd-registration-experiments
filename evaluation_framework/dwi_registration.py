@@ -8,6 +8,16 @@ import ants
 import nibabel as nib
 import h5py
 
+class RegistrationMethods:
+    """
+    Defines constants for registration methods
+    """
+
+    ANTS = "ants"
+    VOXELMORPH = "voxelmorph"
+    MRTRIX = "mrtrix"
+
+
 def register_ants_fa(source_fa: Path, target_fa: Path) -> tuple[nib.nifti1.Nifti1Image, h5py.File, h5py.File]:
     """
     Performs non-linear registration between a source fa and target fa image
