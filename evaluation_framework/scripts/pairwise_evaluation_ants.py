@@ -98,6 +98,8 @@ if (force_rerun) or (new_exp):
     experiment_dict["target_image"] = str(target_path)
     experiment_dict["target_fibers"] = str(target_fiber_path)
     experiment_dict["registration_method"] = dwi_registration.RegistrationMethods.ANTS
+    experiment_dict["percent_sample_fibers"] = str(percent_sample_fibers)
+    experiment_dict["num_repeats"] = str(num_repeats)
 
 # Deformation field files
 forward_diffeo_filename = output_path / 'diffeo_Composite.h5'
@@ -133,7 +135,8 @@ else:
 print("\n  Running ants evalutation...")
 
 pairwise_evaluation.pairwise_evaluation_ants(target_path, forward_diffeo_filename, inverse_diffeo_filename, \
-                                            source_fiber_path, target_fiber_path, output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats)
+                                            source_fiber_path, target_fiber_path, output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats, \
+                                            specified_fibers=pairwise_evaluation.TESTING_FIBER_TRACTS)
 
 print()
 
