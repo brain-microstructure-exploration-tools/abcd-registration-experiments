@@ -20,4 +20,4 @@ From inside the scripts directory, run the driver `pairwise_evaluation_ants.py`
 python pairwise_evaluation_ants.py [-h] [--percent_sample_fibers PERCENT_SAMPLE_FIBERS] [--num_repeats NUM_REPEATS] [--force] source source_fiber_dir target target_fiber_dir output_base_dir exp_name
 ```
 
-This will create a new directory `output_dir` to store evalutation results. The main result of interest for now is inside folder `fiber_distances`.
+This will create a new directory `output_base_dir/exp_name/` to store evalutation results. The main result of interest for now is a csv file `fiber_distances.csv`.
