@@ -8,13 +8,31 @@ import nibabel as nib
 import transformation_utils
 import fiber_measures
 
+### Define some constants which define which fiber tracts to oinclude in the evaluation ###
+
+DEFAULT_FIBER_TRACTS = ['AF_left.tck', 'AF_right.tck', 'ATR_left.tck', 'ATR_right.tck', 'CA.tck', 'CC.tck', \
+                        'CC_1.tck', 'CC_2.tck', 'CC_3.tck', 'CC_4.tck', 'CC_5.tck', 'CC_6.tck', 'CC_7.tck', \
+                        'CG_left.tck', 'CG_right.tck', 'CST_left.tck', 'CST_right.tck', 'FPT_left.tck', 'FPT_right.tck', \
+                        'FX_left.tck', 'FX_right.tck', 'ICP_left.tck', 'ICP_right.tck', 'IFO_left.tck', 'IFO_right.tck', \
+                        'ILF_left.tck', 'ILF_right.tck', 'MCP.tck', 'MLF_left.tck', 'MLF_right.tck', 'OR_left.tck', 'OR_right.tck', \
+                        'POPT_left.tck', 'POPT_right.tck', 'SCP_left.tck', 'SCP_right.tck', 'SLF_III_left.tck', 'SLF_III_right.tck', \
+                        'SLF_II_left.tck', 'SLF_II_right.tck', 'SLF_I_left.tck', 'SLF_I_right.tck', 'STR_left.tck', 'STR_right.tck', \
+                        'ST_FO_left.tck', 'ST_FO_right.tck', 'ST_OCC_left.tck', 'ST_OCC_right.tck', 'ST_PAR_left.tck', 'ST_PAR_right.tck', \
+                        'ST_POSTC_left.tck', 'ST_POSTC_right.tck', 'ST_PREC_left.tck', 'ST_PREC_right.tck', 'ST_PREF_left.tck', 'ST_PREF_right.tck', \
+                        'ST_PREM_left.tck', 'ST_PREM_right.tck', 'T_OCC_left.tck', 'T_OCC_right.tck', 'T_PAR_left.tck', 'T_PAR_right.tck', \
+                        'T_POSTC_left.tck', 'T_POSTC_right.tck', 'T_PREC_left.tck', 'T_PREC_right.tck', 'T_PREF_left.tck', 'T_PREF_right.tck', \
+                        'T_PREM_left.tck', 'T_PREM_right.tck', 'UF_left.tck', 'UF_right.tck']
+
+TESTING_FIBER_TRACTS = ['AF_left.tck', 'AF_right.tck', 'ATR_left.tck', 'ATR_right.tck']
+
+
 def pairwise_evaluation_ants(
     target_fa_path: Path, forward_diffeo_path: Path, inverse_diffeo_path: Path, 
     source_fiber_path: Path, target_fiber_path: Path, 
-    output_path: Path, percent_sample_fibers: float=0.1, num_repeats: int=1
+    output_path: Path, percent_sample_fibers: float=0.1, num_repeats: int=1, specified_fibers: list=[]
 ) -> None:
     """
-    Performs a pairwise registration evalutation given the output of ants registration and a directories source and target fiber tracts
+    Performs a pairwise registration evalutation given the output of ants registration and directories for source and target fiber tracts
     Currently this outputs transformations in mrtrix format, a folder of warped source fiber tracts, and a folder of scores for each fiber tract
     (This will be expanded to compute additional scores and may output something like a csv file to summarize all the scores)
     
@@ -26,6 +44,7 @@ def pairwise_evaluation_ants(
     :param output_path: base directory to write output
     :param percent_sample_fibers: a percentage of fiber streamlines to sample when computing fiber tract distance
     :param num_repeats: the number of times to compute fiber tract distance with different random sampling
+    :param specified_fibers: a list of strings specifying which fibers to use
     """
 
     ### Convert the transformations to mrtrix format ###
@@ -41,23 +60,28 @@ def pairwise_evaluation_ants(
 
     ### Measure fiber distance ### (This is a target for refactoring to a seperate module as we add additional scores, all scores could be organized in a csv or similar)
 
-    # Assumes the same number of fibers with the corresponding names
-    all_source_fibers = sorted(glob.glob(str(source_fiber_path) + '/*.tck'))
-    all_target_fibers = sorted(glob.glob(str(target_fiber_path) + '/*.tck'))
+    # If the user did not specify which subset of fibers to use, we will use the "defaul set" (which we can determine later -- right now its all tracts)
+    if (len(specified_fibers) == 0):
+
+        specified_fibers = DEFAULT_FIBER_TRACTS    
 
     # Output folders for warped fibers and for fiber tract distances
     fiber_out_path = Path('%s/warped_fibers' %(str(output_path)))
-    fiber_distance_path = Path('%s/fiber_distances' %(str(output_path)))
 
     if not fiber_out_path.exists():
         os.mkdir(str(fiber_out_path))
 
-    if not fiber_distance_path.exists():
-        os.mkdir(str(fiber_distance_path))
+    fiber_distance_csv_path = output_path / 'fiber_distances.csv'
+    fiber_distance_csv = ""
 
-    for i in range(0, len(all_source_fibers)):
- 
-        cur_fiber_tract = all_source_fibers[i]
+    for i in range(0, len(specified_fibers)):
+
+        cur_fiber_tract = source_fiber_path / specified_fibers[i]
+        target_fiber_tract = target_fiber_path / specified_fibers[i]
+
+        # If it's not there, skip it
+        if (not cur_fiber_tract.exists() or not target_fiber_tract.exists()):
+            continue
 
         warped_fiber_path = '%s/%s_warped.tck' %(str(fiber_out_path), Path(cur_fiber_tract).stem)
 
@@ -65,7 +89,10 @@ def pairwise_evaluation_ants(
         transformation_utils.warp_fiber_tract(cur_fiber_tract, out_inverse_warp_filename, warped_fiber_path)
 
         # Compute fiber tract distance
-        cur_distance_log_path = '%s/%s_distance.txt' %(str(fiber_distance_path), Path(cur_fiber_tract).stem)
-        cur_distance_log = open(cur_distance_log_path, 'w')
-        cur_fiber_dist = fiber_measures.fiber_tract_distance(warped_fiber_path, all_target_fibers[i], percent_sample_fibers, num_repeats)
-        cur_distance_log.write(str(cur_fiber_dist))
+        cur_fiber_dist = fiber_measures.fiber_tract_distance(warped_fiber_path, target_fiber_tract, percent_sample_fibers, num_repeats)
+        fiber_distance_csv += specified_fibers[i] + ',' + str(cur_fiber_dist) + '\n'
+
+    # Write fiber distance csv
+    f = open(str(fiber_distance_csv_path), 'w')
+    f.write(fiber_distance_csv)
+    f.close()
