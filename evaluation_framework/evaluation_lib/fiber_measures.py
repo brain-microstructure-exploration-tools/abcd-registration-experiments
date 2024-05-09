@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import vtk
 
-import fiber_tract_io
+from evaluation_lib import fiber_tract_io
 
 def mean_closest_fiber_distance(points_m: np.ndarray, points_t: np.ndarray) -> float:
     """

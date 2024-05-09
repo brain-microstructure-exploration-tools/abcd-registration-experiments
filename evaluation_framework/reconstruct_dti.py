@@ -14,7 +14,7 @@ import dipy.reconst.dti as dti
 
 from dipy.data import get_fnames
 
-import process_dwi
+from evaluation_lib import process_dwi
 
 # === Parse args ===
 

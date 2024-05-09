@@ -12,10 +12,10 @@ import nibabel as nib
 from dipy.io.image import save_nifti
 import h5py
 
-import process_dwi
-import dwi_registration
-import transformation_utils
-import pairwise_evaluation
+from evaluation_lib import process_dwi
+from evaluation_lib import dwi_registration
+from evaluation_lib import transformation_utils
+from evaluation_lib import pairwise_evaluation
 
 parser = argparse.ArgumentParser(description='Performs pairwise dwi registration using ANTS and evaluates the accuracy via fiber tract distance (more metrics to be implemented)')
 

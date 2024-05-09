@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-import fiber_measures
+from evaluation_lib import fiber_measures
 
 # Arguments
 parser = argparse.ArgumentParser(description='Evaluate variability of fiber tract distance to the sampling density of streamlines')

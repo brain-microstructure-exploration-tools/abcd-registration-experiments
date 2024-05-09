@@ -10,7 +10,7 @@ import subprocess
 import ants
 from dipy.io.image import save_nifti
 
-import process_dwi
+from evaluation_lib import process_dwi
 
 # === Parse args ===
 

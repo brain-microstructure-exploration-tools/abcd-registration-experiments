@@ -5,8 +5,8 @@ import glob
 import ants
 import nibabel as nib
 
-import transformation_utils
-import fiber_measures
+from evaluation_lib import transformation_utils
+from evaluation_lib import fiber_measures
 
 def pairwise_evaluation_ants(
     target_fa_path: Path, forward_diffeo_path: Path, inverse_diffeo_path: Path, 
