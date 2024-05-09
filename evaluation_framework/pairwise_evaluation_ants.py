@@ -53,6 +53,9 @@ target_fiber_path = Path(os.path.abspath(args.target_fiber_dir))
 
 output_path = Path(os.path.abspath(args.output_dir))
 
+if not output_path.exists():
+  os.mkdir(str(output_path))
+
 # Check source files
 if not source_path.exists() or not source_bval_path.exists() or not source_bvec_path.exists():
     raise FileNotFoundError(f"File {source_path} not found (or missing corresponding bval/bvec)")
@@ -75,8 +78,8 @@ source_dwi_info, source_dti_lotri, source_fa_image = process_dwi.reconstruct_dti
 target_dwi_info, target_dti_lotri, target_fa_image = process_dwi.reconstruct_dti(target_path, target_bval_path, target_bvec_path, target_mask_path)
 
 # Save the fa images
-out_source_fa_filename = Path('%s/source_fa.nii.gz' %(output_path))
-out_target_fa_filename = Path('%s/target_fa.nii.gz' %(output_path))
+out_source_fa_filename = Path('%s/source_fa.nii.gz' %(str(output_path)))
+out_target_fa_filename = Path('%s/target_fa.nii.gz' %(str(output_path)))
 save_nifti(str(out_source_fa_filename), source_fa_image, source_dwi_info['affine'], source_dwi_info['header'])
 save_nifti(str(out_target_fa_filename), target_fa_image, target_dwi_info['affine'], target_dwi_info['header'])
 
