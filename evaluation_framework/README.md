@@ -15,7 +15,7 @@ Python version 3.10.14 and the following packages:
 
 Addtional sofware:
 - [mrtrix](https://www.mrtrix.org/) Tested with version 3.0.3 installed via conda.
-
+- [TractSeg](https://github.com/MIC-DKFZ/TractSeg)
 
 # Data preparation
 
@@ -25,10 +25,42 @@ dti, fa images, brain masks, fod images, and tractography.
 
 # Run an example -- ants FA registration and evaluation via fiber tract distance
 
-From inside the scripts directory, run the driver `pairwise_evaluation_ants.py`
+## Data preprocessing
+
+This example requires several preprocessing steps. We assume the user is starting from dwi images (with corresponding bval/bvec). Preprocessing consists of brain brasking, dti reconstruction, and tractography.
+
+### Brain masking
+
+### DTI reconstruction
+
+### Subject-specific tractography
+
+For this example, we will be using subject-specific tractography to quantify registration accuracy. This is done by applying the registration deformation field to the source fiber tracts and measuring the distance to the target fiber tracts. This requires independent tractography estimation in each indiviudal subject's space. In this step, we will estimate subject-specific full brain tractography.
+
+#### Computation of fiber orientation distribution (fod) images.
+
+Fod images can be estimated given dwi with mrtrix commmand [dti2fod](https://mrtrix.readthedocs.io/en/dev/reference/commands/dwi2fod.html)
+
+#### Estimating tractography
+
+Once a fod image has been computed, full brain tractography can be estimated using the script `single_subject_tractography.py`.
+
+```sh 
+python single_subject_tractograph.py /path/to/fod_image.nii.gz /path/to/output_directory
+```
+This will create a directory structure `tractseg_output/TOM_trackings` at the specified output directory. Inside this directory will be .tck files representing each tract.
+
+## Running registration and evalutation
+
+To proceed with the example, we assume the preprocessing has been performed for 2 subjects and we use the following organization to illustrate usage:
+
+- a folder `/path/to/data/` with `source_fa.nii.gz` and `target_fa.nii.gz` fa images for the source and target subjects
+- folders for each subject's tractography `/path/to/source/tractseg_output/TOM_trackings` and `/path/to/target/tractseg_output/TOM_trackings`
+
+Now you can run the driver `pairwise_evaluation_ants.py`
 
 ```sh
-python pairwise_evaluation_ants.py [-h] [--percent_sample_fibers PERCENT_SAMPLE_FIBERS] [--num_repeats NUM_REPEATS] source source_mask source_fiber_dir target target_mask target_fiber_dir output_dir
+python pairwise_evaluation_ants.py /path/to/data/source.nii.gz /path/to/source/tractseg_output/TOM_trackings /path/to/data/target.nii.gz /path/to/target/tractseg_output/TOM_trackings /path/to/output_base_directory my_test_exp
 ```
 
-This will create a new directory `output_dir` to store evalutation results. The main result of interest for now is inside folder `fiber_distances`.
+This will create a new directory `/path/to/output_base_directory/my_test_exp/` to store evalutation results. The main result is a csv file `fiber_distances.csv` containing all the fiber tract distances between source and target after registration. Experiment metadata are stored in a json file `my_test_exp.json`.  
