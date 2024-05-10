@@ -3,7 +3,10 @@ from pathlib import Path
 import subprocess
 import os
 
+import nibabel as nib
 import ants
+
+from evaluation_lib import transformation_utils
 
 parser = argparse.ArgumentParser(description='Converts an ants transform to a transform compatible with mrtrix')
 
@@ -24,34 +27,11 @@ out_name = args.out_name
 # Create the output directory if it doesn't exist
 if not output_dir.exists():
   os.mkdir(str(output_dir))  
-  
-identity_warp = '%s/identity_warp[].nii.gz' %(str(output_dir))
 
-# Create identity warp
-subprocess.run(['warpinit', target_image, identity_warp, '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+mrtrix_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_image, ants_transform)
 
-# Transform the idenity warp using ants
-
-ants_target_im = ants.image_read(target_image)
-
-# Transform the 3 dimensions
-for d in range(0, 3):
-
-    cur_identity_warp = '%s/identity_warp%d.nii.gz' %(output_dir, d)
-
-    cur_ants_source_im = ants.image_read(cur_identity_warp)
-    
-    cur_warped_image = ants.apply_transforms(fixed=ants_target_im, moving=cur_ants_source_im, transformlist=ants_transform, defaultvalue=2147483647)
-
-    out_image_filename = '%s/mrtrix_warp%d.nii.gz' %(output_dir, d)
-    ants.image_write(cur_warped_image, out_image_filename)
-
-# Fix warp
-corrected_warp = '%s/%s.nii.gz' %(output_dir, out_name)
-warp_filename = '%s/mrtrix_warp[].nii.gz' %(output_dir)
-subprocess.run(['warpcorrect', warp_filename, corrected_warp, '-marker', '2147483647', '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-# Perhaps we should clean up the temporary files that are no longer needed?
+out_warp_filename = '%s/%s.nii.gz' %(str(output_dir), out_name)
+nib.save(mrtrix_warp, out_warp_filename)
 
 
 
