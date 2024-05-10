@@ -4,7 +4,7 @@ from pathlib import Path
 import glob
 import subprocess
 
-import fiber_tract_io
+from evaluation_lib import fiber_tract_io
 
 parser = argparse.ArgumentParser(description='Converts a directory of tck files to vtk format')
 

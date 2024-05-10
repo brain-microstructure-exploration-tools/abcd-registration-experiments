@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 
-import fiber_measures
+from evaluation_lib import fiber_measures
 
 def main(fiber_tract_M_path, fiber_tract_T_path, percent_sample_fibers):
  

@@ -5,8 +5,8 @@ import glob
 import ants
 import nibabel as nib
 
-import transformation_utils
-import fiber_measures
+from evaluation_lib import transformation_utils
+from evaluation_lib import fiber_measures
 
 ### Define some constants which define which fiber tracts to oinclude in the evaluation ###
 

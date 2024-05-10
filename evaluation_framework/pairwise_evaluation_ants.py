@@ -16,10 +16,10 @@ import nibabel as nib
 from dipy.io.image import save_nifti
 import h5py
 
-import process_dwi
-import dwi_registration
-import transformation_utils
-import pairwise_evaluation
+from evaluation_lib import process_dwi
+from evaluation_lib import dwi_registration
+from evaluation_lib import transformation_utils
+from evaluation_lib import pairwise_evaluation
 
 parser = argparse.ArgumentParser(description='Performs pairwise fa registration using ANTS and evaluates the accuracy via fiber tract distance (more metrics to be implemented)')
 
@@ -49,6 +49,11 @@ source_fiber_path = Path(os.path.abspath(args.source_fiber_dir))
 target_path = Path(os.path.abspath(args.target))
 target_without_ext = str(target_path)[:str(target_path).rfind(''.join(target_path.suffixes))]
 target_fiber_path = Path(os.path.abspath(args.target_fiber_dir))
+
+output_path = Path(os.path.abspath(args.output_dir))
+
+if not output_path.exists():
+  os.mkdir(str(output_path))
 
 # Check source files
 if not source_path.exists():

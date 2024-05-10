@@ -6,7 +6,7 @@ import os
 import nibabel as nib
 import ants
 
-import transformation_utils
+from evaluation_lib import transformation_utils
 
 parser = argparse.ArgumentParser(description='Converts an ants transform to a transform compatible with mrtrix')
 
