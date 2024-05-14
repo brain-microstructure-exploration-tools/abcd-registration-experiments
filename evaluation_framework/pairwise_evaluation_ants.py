@@ -50,7 +50,7 @@ target_path = Path(os.path.abspath(args.target))
 target_without_ext = str(target_path)[:str(target_path).rfind(''.join(target_path.suffixes))]
 target_fiber_path = Path(os.path.abspath(args.target_fiber_dir))
 
-output_path = Path(os.path.abspath(args.output_dir))
+output_path = Path(os.path.abspath(args.output_base_dir))
 
 if not output_path.exists():
   os.mkdir(str(output_path))
