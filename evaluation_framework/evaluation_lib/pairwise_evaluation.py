@@ -103,14 +103,14 @@ def compute_fiber_metrics(
 
         specified_fibers = DEFAULT_FIBER_TRACTS    
 
-    # Output folders for warped fibers and for fiber tract distances
+    # Output folders for warped fibers
     fiber_out_path = Path('%s/warped_fibers' %(str(output_path)))
 
     if not fiber_out_path.exists():
         os.mkdir(str(fiber_out_path))
 
-    fiber_distance_csv_path = output_path / 'fiber_distances.csv'
-    fiber_distance_csv = ""
+    fiber_distance_csv_path = output_path / 'fiber_measures.csv'
+    fiber_distance_csv = "Fiber Tract Name, Fiber Tract Distance\n"
 
     for i in range(0, len(specified_fibers)):
 
@@ -150,3 +150,34 @@ def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Pa
     if (len(specified_segmentations) == 0):
 
         specified_segmentations = DEFAULT_SEGMENTATIONS
+
+    # Output folders for warped fibers and for fiber tract distances
+    segmentation_out_path = Path('%s/warped_segmentations' %(str(output_path)))
+
+    if not segmentation_out_path.exists():
+        os.mkdir(str(segmentation_out_path))
+
+    segmentation_measures_csv_path = output_path / 'segmentation_measures.csv'
+    segmentation_measures_csv = "Segmentation Name, Dice, Volumetric Similarity\n"
+
+    for i in range(0, len(specified_segmentations)):
+
+        cur_segmentation = source_segmentation_path / specified_segmentations[i]
+        target_segmentation = target_segmentation_path / specified_segmentations[i]
+
+        # If it's not there, skip it
+        if (not cur_segmentation.exists() or not target_segmentation.exists()):
+            continue
+
+        warped_segmentation_path = '%s/%s_warped.nii.gz' %(str(segmentation_out_path), Path(cur_segmentation).stem)
+
+        # Deform the source segmentation image
+        transformation_utils.warp_segmentation_image(cur_segmentation, diffeo_path, warped_segmentation_path)
+
+        dice = segmentation_measures.dice_overlap(warped_segmentation_path, target_segmentation)
+        segmentation_measures_csv += specified_segmentations[i] + ',' + str(dice) +  ',n/a\n'
+    
+    # Write segmentation measures csv
+    f = open(str(segmentation_measures_csv_path), 'w')
+    f.write(segmentation_measures_csv)
+    f.close()
