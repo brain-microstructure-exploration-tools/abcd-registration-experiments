@@ -39,7 +39,7 @@ def pairwise_evaluation_ants(
     :param target_fa_path: the target fa image in .nii.gz format
     :param forward_diffeo_path: the forward diffeo from ants registration (not currently used in scoring)
     :param inverse_diffeo_path: the inverse diffeo from ants registration
-    :param source_fiber_path: a directory with source fibers in tck format (may ultimate give an option to choose a subset of tracts within folder)
+    :param source_fiber_path: a directory with source fibers in tck format
     :param target_fiber_path: a directory with target fibers in tck format which correspond by name to source fibers
     :param output_path: base directory to write output
     :param percent_sample_fibers: a percentage of fiber streamlines to sample when computing fiber tract distance
@@ -59,6 +59,25 @@ def pairwise_evaluation_ants(
     nib.save(mrtrix_inverse_warp, out_inverse_warp_filename)
 
     ### Measure fiber distance ### (This is a target for refactoring to a seperate module as we add additional scores, all scores could be organized in a csv or similar)
+
+    compute_fiber_metrics(out_inverse_warp_filename, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers, num_repeats, specified_fibers)
+
+
+def compute_fiber_metrics(
+    diffeo_path: Path, source_fiber_path: Path, target_fiber_path: Path, output_path: Path, 
+    percent_sample_fibers: float, num_repeats: int, specified_fibers: list=[]
+    ) -> None:
+    """
+    Computes fiber based metrics (currently only fiber tract distance) and outputs a csv to the specified output path
+    
+    :param diffeo_path: the diffeo used to warp source fibers
+    :param source_fiber_path: a directory with source fibers in tck format
+    :param target_fiber_path: a directory with target fibers in tck format which correspond by name to source fibers
+    :param output_path: base directory to write output
+    :param percent_sample_fibers: a percentage of fiber streamlines to sample when computing fiber tract distance
+    :param num_repeats: the number of times to compute fiber tract distance with different random sampling
+    :param specified_fibers: a list of strings specifying which fibers to use
+    """
 
     # If the user did not specify which subset of fibers to use, we will use the "defaul set" (which we can determine later -- right now its all tracts)
     if (len(specified_fibers) == 0):
@@ -86,7 +105,7 @@ def pairwise_evaluation_ants(
         warped_fiber_path = '%s/%s_warped.tck' %(str(fiber_out_path), Path(cur_fiber_tract).stem)
 
         # Deform the source fiber tract
-        transformation_utils.warp_fiber_tract(cur_fiber_tract, out_inverse_warp_filename, warped_fiber_path)
+        transformation_utils.warp_fiber_tract(cur_fiber_tract, diffeo_path, warped_fiber_path)
 
         # Compute fiber tract distance
         cur_fiber_dist = fiber_measures.fiber_tract_distance(warped_fiber_path, target_fiber_tract, percent_sample_fibers, num_repeats)
