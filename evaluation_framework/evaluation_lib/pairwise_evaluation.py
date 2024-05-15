@@ -126,7 +126,7 @@ def compute_fiber_metrics(
         os.mkdir(str(evaluation_measures_output_path))
 
     fiber_distance_csv_path = evaluation_measures_output_path / 'fiber_measures.csv'
-    fiber_distance_csv = "Fiber Tract Name, Fiber Tract Distance\n"
+    fiber_distance_csv = 'Fiber Tract Name, Fiber Tract Distance\n'
 
     for i in range(0, len(specified_fibers)):
 
@@ -137,14 +137,15 @@ def compute_fiber_metrics(
         if (not cur_fiber_tract.exists() or not target_fiber_tract.exists()):
             continue
 
-        warped_fiber_path = '%s/%s_warped.tck' %(str(fiber_out_path), Path(cur_fiber_tract).stem)
+        warped_fiber_path = fiber_out_path / f'{specified_fibers[i]}_warped.tck'
 
         # Deform the source fiber tract
         transformation_utils.warp_fiber_tract(cur_fiber_tract, diffeo_path, warped_fiber_path)
 
         # Compute fiber tract distance
         cur_fiber_dist = fiber_measures.fiber_tract_distance(warped_fiber_path, target_fiber_tract, percent_sample_fibers, num_repeats)
-        fiber_distance_csv += specified_fibers[i] + ',' + str(cur_fiber_dist) + '\n'
+        
+        fiber_distance_csv += f'{specified_fibers[i]}, {str(cur_fiber_dist)}\n'
 
     # Write fiber distance csv
     f = open(str(fiber_distance_csv_path), 'w')
@@ -180,7 +181,7 @@ def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Pa
         os.mkdir(str(evaluation_measures_output_path))
 
     segmentation_measures_csv_path = evaluation_measures_output_path / 'segmentation_measures.csv'
-    segmentation_measures_csv = "Segmentation Name, Dice, Volumetric Similarity\n"
+    segmentation_measures_csv = 'Segmentation Name, Dice, Volumetric Similarity\n'
 
     for i in range(0, len(specified_segmentations)):
 
@@ -191,14 +192,16 @@ def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Pa
         if (not cur_segmentation.exists() or not target_segmentation.exists()):
             continue
 
-        warped_segmentation_path = '%s/%s_warped.nii.gz' %(str(segmentation_out_path), Path(cur_segmentation).stem)
+        warped_segmentation_path = segmentation_out_path / f'{specified_segmentations[i]}_warped.nii.gz'
 
         # Deform the source segmentation image
         transformation_utils.warp_segmentation_image(cur_segmentation, diffeo_path, warped_segmentation_path)
 
         dice = segmentation_measures.dice_overlap(warped_segmentation_path, target_segmentation)
-        segmentation_measures_csv += specified_segmentations[i] + ',' + str(dice) +  ',n/a\n'
-    
+        volumetric_similarity = segmentation_measures.volumetric_similarity(warped_segmentation_path, target_segmentation)
+        
+        segmentation_measures_csv += f'{specified_segmentations[i]}, {dice}, {volumetric_similarity}\n'
+
     # Write segmentation measures csv
     f = open(str(segmentation_measures_csv_path), 'w')
     f.write(segmentation_measures_csv)
