@@ -146,8 +146,10 @@ else:
 print("\n  Running ants evalutation...")
 
 pairwise_evaluation.pairwise_evaluation_ants(target_path, forward_diffeo_filename, inverse_diffeo_filename, \
-                                            source_fiber_path, source_segmentation_path, target_fiber_path, target_segmentation_path, output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats, \
-                                            specified_fibers=pairwise_evaluation.TESTING_FIBER_TRACTS)
+                                            source_fiber_path, source_segmentation_path, target_fiber_path, target_segmentation_path, \
+                                            output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats, \
+                                            specified_fibers=pairwise_evaluation.TESTING_FIBER_TRACTS, \
+                                            specified_segmentations=pairwise_evaluation.TESTING_SEGMENTATIONS)
 
 print()
 

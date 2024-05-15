@@ -7,6 +7,7 @@ import nibabel as nib
 
 from evaluation_lib import transformation_utils
 from evaluation_lib import fiber_measures
+from evaluation_lib import segmentation_measures
 
 ### Define some constants which define which fiber tracts to oinclude in the evaluation ###
 
@@ -25,12 +26,26 @@ DEFAULT_FIBER_TRACTS = ['AF_left.tck', 'AF_right.tck', 'ATR_left.tck', 'ATR_righ
 
 TESTING_FIBER_TRACTS = ['AF_left.tck', 'AF_right.tck', 'ATR_left.tck', 'ATR_right.tck']
 
+DEFAULT_SEGMENTATIONS = ['AF_left.nii.gz', 'AF_right.nii.gz', 'ATR_left.nii.gz', 'ATR_right.nii.gz', 'CA.nii.gz', 'CC.nii.gz', \
+                        'CC_1.nii.gz', 'CC_2.nii.gz', 'CC_3.nii.gz', 'CC_4.nii.gz', 'CC_5.nii.gz', 'CC_6.nii.gz', 'CC_7.nii.gz', \
+                        'CG_left.nii.gz', 'CG_right.nii.gz', 'CST_left.nii.gz', 'CST_right.nii.gz', 'FPT_left.nii.gz', 'FPT_right.nii.gz', \
+                        'FX_left.nii.gz', 'FX_right.nii.gz', 'ICP_left.nii.gz', 'ICP_right.nii.gz', 'IFO_left.nii.gz', 'IFO_right.nii.gz', \
+                        'ILF_left.nii.gz', 'ILF_right.nii.gz', 'MCP.nii.gz', 'MLF_left.nii.gz', 'MLF_right.nii.gz', 'OR_left.nii.gz', 'OR_right.nii.gz', \
+                        'POPT_left.nii.gz', 'POPT_right.nii.gz', 'SCP_left.nii.gz', 'SCP_right.nii.gz', 'SLF_III_left.nii.gz', 'SLF_III_right.nii.gz', \
+                        'SLF_II_left.nii.gz', 'SLF_II_right.nii.gz', 'SLF_I_left.nii.gz', 'SLF_I_right.nii.gz', 'STR_left.nii.gz', 'STR_right.nii.gz', \
+                        'ST_FO_left.nii.gz', 'ST_FO_right.nii.gz', 'ST_OCC_left.nii.gz', 'ST_OCC_right.nii.gz', 'ST_PAR_left.nii.gz', 'ST_PAR_right.nii.gz', \
+                        'ST_POSTC_left.nii.gz', 'ST_POSTC_right.nii.gz', 'ST_PREC_left.nii.gz', 'ST_PREC_right.nii.gz', 'ST_PREF_left.nii.gz', 'ST_PREF_right.nii.gz', \
+                        'ST_PREM_left.nii.gz', 'ST_PREM_right.nii.gz', 'T_OCC_left.nii.gz', 'T_OCC_right.nii.gz', 'T_PAR_left.nii.gz', 'T_PAR_right.nii.gz', \
+                        'T_POSTC_left.nii.gz', 'T_POSTC_right.nii.gz', 'T_PREC_left.nii.gz', 'T_PREC_right.nii.gz', 'T_PREF_left.nii.gz', 'T_PREF_right.nii.gz', \
+                        'T_PREM_left.nii.gz', 'T_PREM_right.nii.gz', 'UF_left.nii.gz', 'UF_right.nii.gz']
+
+TESTING_SEGMENTATIONS = ['AF_left.nii.gz', 'AF_right.nii.gz', 'ATR_left.nii.gz', 'ATR_right.nii.gz']
 
 def pairwise_evaluation_ants(
     target_fa_path: Path, forward_diffeo_path: Path, inverse_diffeo_path: Path, 
     source_fiber_path: Path, source_segmentation_path: Path,
     target_fiber_path: Path, target_segmentation_path: Path,
-    output_path: Path, percent_sample_fibers: float=0.1, num_repeats: int=1, specified_fibers: list=[]
+    output_path: Path, percent_sample_fibers: float=0.1, num_repeats: int=1, specified_fibers: list=[], specified_segmentations: list=[]
 ) -> None:
     """
     Performs a pairwise registration evalutation given the output of ants registration and directories for source and target fiber tracts
@@ -48,6 +63,7 @@ def pairwise_evaluation_ants(
     :param percent_sample_fibers: a percentage of fiber streamlines to sample when computing fiber tract distance
     :param num_repeats: the number of times to compute fiber tract distance with different random sampling
     :param specified_fibers: a list of strings specifying which fibers to use
+    :param specified_segmentations: a list of strings specifying which segmentations to use
     """
 
     ### Convert the transformations to mrtrix format ###
@@ -64,6 +80,7 @@ def pairwise_evaluation_ants(
     ### Compute metrics ###
 
     compute_fiber_metrics(out_inverse_warp_filename, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers, num_repeats, specified_fibers)
+    compute_segmentation_metrics(out_forward_warp_filename, source_segmentation_path, target_segmentation_path, output_path, specified_segmentations)
 
 def compute_fiber_metrics(
     diffeo_path: Path, source_fiber_path: Path, target_fiber_path: Path, output_path: Path, 
@@ -118,7 +135,7 @@ def compute_fiber_metrics(
     f.write(fiber_distance_csv)
     f.close()
 
-def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Path, target_segmentation_path: Path, output_path: Path) -> None:
+def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Path, target_segmentation_path: Path, output_path: Path, specified_segmentations: list=[]) -> None:
     """
     Computes segmentation based metrics (currently dice and volumetric similarity) and outputs a csv to the specified output path
     
@@ -126,6 +143,10 @@ def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Pa
     :param source_segmentation_path: a directory with source binary segmentations in nii.gz format
     :param target_segmentation_path: a directory with target binary segmentations in nii.gz format
     :param output_path: base directory to write output
+    :param specified_segmentations: a list of strings specifying which segmentations to use
     """
 
-    
+    # If the user did not specify which subset of segmenations to use, we will use the "defaul set"
+    if (len(specified_segmentations) == 0):
+
+        specified_segmentations = DEFAULT_SEGMENTATIONS
