@@ -1,9 +1,6 @@
-import os
 from pathlib import Path
 
 import numpy as np
-import vtk
-
 import nibabel as nib
 
 def dice_overlap(source_seg_path: Path, target_seg_path: Path) -> float:
