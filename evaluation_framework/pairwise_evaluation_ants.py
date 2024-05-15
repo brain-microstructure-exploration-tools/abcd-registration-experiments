@@ -76,6 +76,12 @@ output_path = output_base_dir / exp_name
 if not output_path.exists():
     os.mkdir(str(output_path))
 
+# This will be a directory to store everything related to the registration
+registration_path = output_path / 'registration'
+
+if not registration_path.exists():
+    os.mkdir(str(registration_path))
+
 # A json file to store information about the registration experiment
 experiment_json_file = output_path / f'{exp_name}.json'
 
@@ -113,8 +119,8 @@ if (force_rerun) or (new_exp):
     experiment_dict["num_repeats"] = str(num_repeats)
 
 # Deformation field files
-forward_diffeo_filename = output_path / 'diffeo_Composite.h5'
-inverse_diffeo_filename = output_path / 'diffeo_InverseComposite.h5'
+forward_diffeo_filename = registration_path / 'diffeo_Composite.h5'
+inverse_diffeo_filename = registration_path / 'diffeo_InverseComposite.h5'
 
 # If this is a continued experiment where the user is NOT reruning, check to make sure the deformation fields exists. If they don't exist let the user know a force is required
 if (not forward_diffeo_filename.exists() or not inverse_diffeo_filename.exists()) and (not new_exp and not force_rerun):
@@ -132,7 +138,7 @@ if (force_rerun) or (new_exp):
 
     # Write deformed fa
     warped_fa_filename = Path(source_without_ext).stem + "_warped.nii.gz"
-    out_image_path = output_path / warped_fa_filename
+    out_image_path = registration_path / warped_fa_filename
     nib.save(warped_fa, str(out_image_path))
 
     # Write hd5 transforms

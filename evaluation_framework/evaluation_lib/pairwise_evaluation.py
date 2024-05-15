@@ -2,12 +2,20 @@ from pathlib import Path
 import os
 import glob
 
+from tempfile import TemporaryDirectory
+
 import ants
 import nibabel as nib
 
 from evaluation_lib import transformation_utils
 from evaluation_lib import fiber_measures
 from evaluation_lib import segmentation_measures
+
+### Constants for output directories
+
+WARPED_FIBERS_DIR = 'warped_fibers'
+WARPED_SEGMENTATION_DIR = 'warped_segmentations'
+EVALUATION_MEASURES_DIR = 'evaluation_measures'
 
 ### Define some constants which define which fiber tracts to oinclude in the evaluation ###
 
@@ -68,19 +76,21 @@ def pairwise_evaluation_ants(
 
     ### Convert the transformations to mrtrix format ###
 
-    mrtrix_forward_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_fa_path, forward_diffeo_path)
-    mrtrix_inverse_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_fa_path, inverse_diffeo_path)
+    with TemporaryDirectory() as temp_dir:    
 
-    out_forward_warp_filename = '%s/mrtrix_forward_diffeo.nii.gz' %(str(output_path))
-    out_inverse_warp_filename = '%s/mrtrix_inverse_diffeo.nii.gz' %(str(output_path))
+        mrtrix_forward_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_fa_path, forward_diffeo_path)
+        mrtrix_inverse_warp = transformation_utils.convert_ants_transform_to_mrtrix_transform(target_fa_path, inverse_diffeo_path)
 
-    nib.save(mrtrix_forward_warp, out_forward_warp_filename)
-    nib.save(mrtrix_inverse_warp, out_inverse_warp_filename)
+        out_forward_warp_filename = Path(temp_dir) / 'mrtrix_forward_diffeo.nii.gz'
+        out_inverse_warp_filename = Path(temp_dir) / 'mrtrix_inverse_diffeo.nii.gz'
 
-    ### Compute metrics ###
+        nib.save(mrtrix_forward_warp, out_forward_warp_filename)
+        nib.save(mrtrix_inverse_warp, out_inverse_warp_filename)
 
-    compute_fiber_metrics(out_inverse_warp_filename, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers, num_repeats, specified_fibers)
-    compute_segmentation_metrics(out_forward_warp_filename, source_segmentation_path, target_segmentation_path, output_path, specified_segmentations)
+        ### Compute metrics ###
+
+        compute_fiber_metrics(out_inverse_warp_filename, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers, num_repeats, specified_fibers)
+        compute_segmentation_metrics(out_forward_warp_filename, source_segmentation_path, target_segmentation_path, output_path, specified_segmentations)
 
 def compute_fiber_metrics(
     diffeo_path: Path, source_fiber_path: Path, target_fiber_path: Path, output_path: Path, 
@@ -104,12 +114,18 @@ def compute_fiber_metrics(
         specified_fibers = DEFAULT_FIBER_TRACTS    
 
     # Output folders for warped fibers
-    fiber_out_path = Path('%s/warped_fibers' %(str(output_path)))
+    fiber_out_path = output_path / WARPED_FIBERS_DIR
 
     if not fiber_out_path.exists():
         os.mkdir(str(fiber_out_path))
 
-    fiber_distance_csv_path = output_path / 'fiber_measures.csv'
+    # Measures output path 
+    evaluation_measures_output_path = output_path / EVALUATION_MEASURES_DIR 
+    
+    if not evaluation_measures_output_path.exists():
+        os.mkdir(str(evaluation_measures_output_path))
+
+    fiber_distance_csv_path = evaluation_measures_output_path / 'fiber_measures.csv'
     fiber_distance_csv = "Fiber Tract Name, Fiber Tract Distance\n"
 
     for i in range(0, len(specified_fibers)):
@@ -152,12 +168,18 @@ def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Pa
         specified_segmentations = DEFAULT_SEGMENTATIONS
 
     # Output folders for warped fibers and for fiber tract distances
-    segmentation_out_path = Path('%s/warped_segmentations' %(str(output_path)))
+    segmentation_out_path = output_path / WARPED_SEGMENTATION_DIR
 
     if not segmentation_out_path.exists():
         os.mkdir(str(segmentation_out_path))
 
-    segmentation_measures_csv_path = output_path / 'segmentation_measures.csv'
+    # Measures output path 
+    evaluation_measures_output_path = output_path / EVALUATION_MEASURES_DIR 
+    
+    if not evaluation_measures_output_path.exists():
+        os.mkdir(str(evaluation_measures_output_path))
+
+    segmentation_measures_csv_path = evaluation_measures_output_path / 'segmentation_measures.csv'
     segmentation_measures_csv = "Segmentation Name, Dice, Volumetric Similarity\n"
 
     for i in range(0, len(specified_segmentations)):
