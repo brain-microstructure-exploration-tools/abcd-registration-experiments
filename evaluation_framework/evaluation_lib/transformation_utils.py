@@ -61,6 +61,17 @@ def warp_fiber_tract(in_fiber_tract_path: Path, mrtrix_warp_path: Path, out_fibe
     # To be consistent with other methods, we might consider returning the tck in memory instead of writing to disk
     subprocess.run(['tcktransform', in_fiber_tract_path, mrtrix_warp_path, out_fiber_tract_path, '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+def warp_segmentation_image(in_segmentation_path: Path, mrtrix_warp_path: Path, out_segmentation_path: Path) -> None:
+    """
+    Warp a segmentation image using mrtrix
+
+    :param in_segmentation_path: path to a nii.gz segmentation image
+    :param mrtrix_warp_path: path to a deformation field
+    :param out_segmentation_path: path to store output of the warped segmentation image 
+    """
+
+    subprocess.run(['mrtransform', in_segmentation_path, out_segmentation_path, '-warp', mrtrix_warp_path, '-interp', 'nearest',  '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 def write_hd5_transform(hd5_file_object: h5py.File, out_name: Path) -> None:
     """
     Write an hd5 transform as a copy of a given h5py file object
