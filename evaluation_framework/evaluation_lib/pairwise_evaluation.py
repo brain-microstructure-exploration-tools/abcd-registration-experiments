@@ -28,7 +28,8 @@ TESTING_FIBER_TRACTS = ['AF_left.tck', 'AF_right.tck', 'ATR_left.tck', 'ATR_righ
 
 def pairwise_evaluation_ants(
     target_fa_path: Path, forward_diffeo_path: Path, inverse_diffeo_path: Path, 
-    source_fiber_path: Path, target_fiber_path: Path, 
+    source_fiber_path: Path, source_segmentation_path: Path,
+    target_fiber_path: Path, target_segmentation_path: Path,
     output_path: Path, percent_sample_fibers: float=0.1, num_repeats: int=1, specified_fibers: list=[]
 ) -> None:
     """
@@ -40,7 +41,9 @@ def pairwise_evaluation_ants(
     :param forward_diffeo_path: the forward diffeo from ants registration (not currently used in scoring)
     :param inverse_diffeo_path: the inverse diffeo from ants registration
     :param source_fiber_path: a directory with source fibers in tck format
+    :param source_segmentation_path: a directory with source binary segmentations in nii.gz format
     :param target_fiber_path: a directory with target fibers in tck format which correspond by name to source fibers
+    :param target_segmentation_path: a directory with target binary segmentations in nii.gz format
     :param output_path: base directory to write output
     :param percent_sample_fibers: a percentage of fiber streamlines to sample when computing fiber tract distance
     :param num_repeats: the number of times to compute fiber tract distance with different random sampling
@@ -58,10 +61,9 @@ def pairwise_evaluation_ants(
     nib.save(mrtrix_forward_warp, out_forward_warp_filename)
     nib.save(mrtrix_inverse_warp, out_inverse_warp_filename)
 
-    ### Measure fiber distance ### (This is a target for refactoring to a seperate module as we add additional scores, all scores could be organized in a csv or similar)
+    ### Compute metrics ###
 
     compute_fiber_metrics(out_inverse_warp_filename, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers, num_repeats, specified_fibers)
-
 
 def compute_fiber_metrics(
     diffeo_path: Path, source_fiber_path: Path, target_fiber_path: Path, output_path: Path, 
@@ -115,3 +117,15 @@ def compute_fiber_metrics(
     f = open(str(fiber_distance_csv_path), 'w')
     f.write(fiber_distance_csv)
     f.close()
+
+def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Path, target_segmentation_path: Path, output_path: Path) -> None:
+    """
+    Computes segmentation based metrics (currently dice and volumetric similarity) and outputs a csv to the specified output path
+    
+    :param diffeo_path: the diffeo used to warp source segmentations
+    :param source_segmentation_path: a directory with source binary segmentations in nii.gz format
+    :param target_segmentation_path: a directory with target binary segmentations in nii.gz format
+    :param output_path: base directory to write output
+    """
+
+    

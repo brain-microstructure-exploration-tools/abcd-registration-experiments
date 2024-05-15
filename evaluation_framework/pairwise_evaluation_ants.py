@@ -21,7 +21,7 @@ from evaluation_lib import dwi_registration
 from evaluation_lib import transformation_utils
 from evaluation_lib import pairwise_evaluation
 
-parser = argparse.ArgumentParser(description='Performs pairwise fa registration using ANTS and evaluates the accuracy via fiber tract distance (more metrics to be implemented)')
+parser = argparse.ArgumentParser(description='Performs pairwise fa registration using ANTS and evaluates the accuracy via fiber tract distance and dice overlap')
 
 # Optional arguments
 parser.add_argument('--percent_sample_fibers', default=0.1, type=float, help='randomly sample a percentage of fiber streamlines')
@@ -31,8 +31,10 @@ parser.add_argument('--force', action="store_true", help='force the full experim
 # Positional arguments next
 parser.add_argument('source', type=str, help='path to a source fa')
 parser.add_argument('source_fiber_dir', type=str, help='directory for source fiber tracts')
+parser.add_argument('source_segmentation_dir', type=str, help='directory for source binary segmentations')
 parser.add_argument('target', type=str, help='path to a target fa')
 parser.add_argument('target_fiber_dir', type=str, help='directory for target fiber tracts')
+parser.add_argument('target_segmentation_dir', type=str, help='directory for target binary segmentations')
 parser.add_argument('output_base_dir', type=str, help='path to a base folder for saving output of registration')
 parser.add_argument('exp_name', type=str, help='a name for the experiment')
 
@@ -45,10 +47,12 @@ force_rerun = args.force
 source_path = Path(os.path.abspath(args.source))
 source_without_ext = str(source_path)[:str(source_path).rfind(''.join(source_path.suffixes))]
 source_fiber_path = Path(os.path.abspath(args.source_fiber_dir))
+source_segmentation_path = Path(os.path.abspath(args.source_segmentation_dir))
 
 target_path = Path(os.path.abspath(args.target))
 target_without_ext = str(target_path)[:str(target_path).rfind(''.join(target_path.suffixes))]
 target_fiber_path = Path(os.path.abspath(args.target_fiber_dir))
+target_segmentation_path = Path(os.path.abspath(args.target_segmentation_dir))
 
 output_path = Path(os.path.abspath(args.output_base_dir))
 
@@ -100,8 +104,10 @@ if (force_rerun) or (new_exp):
     experiment_dict["experiment_name"] = exp_name
     experiment_dict["source_image"] = str(source_path)
     experiment_dict["source_fibers"] = str(source_fiber_path)
+    experiment_dict["source_segmentations"] = str(source_segmentation_path)
     experiment_dict["target_image"] = str(target_path)
     experiment_dict["target_fibers"] = str(target_fiber_path)
+    experiment_dict["target_segmentations"] = str(target_segmentation_path)
     experiment_dict["registration_method"] = dwi_registration.RegistrationMethods.ANTS
     experiment_dict["percent_sample_fibers"] = str(percent_sample_fibers)
     experiment_dict["num_repeats"] = str(num_repeats)
@@ -140,7 +146,7 @@ else:
 print("\n  Running ants evalutation...")
 
 pairwise_evaluation.pairwise_evaluation_ants(target_path, forward_diffeo_filename, inverse_diffeo_filename, \
-                                            source_fiber_path, target_fiber_path, output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats, \
+                                            source_fiber_path, source_segmentation_path, target_fiber_path, target_segmentation_path, output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats, \
                                             specified_fibers=pairwise_evaluation.TESTING_FIBER_TRACTS)
 
 print()
