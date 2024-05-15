@@ -61,7 +61,14 @@ To proceed with the example, we assume the preprocessing has been performed for 
 Now you can run the driver `pairwise_evaluation_ants.py`
 
 ```sh
-python pairwise_evaluation_ants.py /path/to/data/source.nii.gz /path/to/source/tractseg_output/TOM_trackings /path/to/source/tractseg_output/bundle_segmentations /path/to/data/target.nii.gz /path/to/target/tractseg_output/TOM_trackings /path/to/target/tractseg_output/bundle_segmentations /path/to/output_base_directory my_test_exp
+python pairwise_evaluation_ants.py  
+       /path/to/data/source.nii.gz  
+       /path/to/source/tractseg_output/TOM_trackings    
+       /path/to/source/tractseg_output/bundle_segmentations
+       /path/to/data/target.nii.gz
+       /path/to/target/tractseg_output/TOM_trackings
+       /path/to/target/tractseg_output/bundle_segmentations
+       /path/to/output_base_directory my_test_exp
 ```
 
-This will create a new directory `/path/to/output_base_directory/my_test_exp/` to store evalutation results. The main result is a csv file `fiber_distances.csv` containing all the fiber tract distances between source and target after registration. Experiment metadata are stored in a json file `my_test_exp.json`.  
+This will create a new directory `/path/to/output_base_directory/my_test_exp/` to store evalutation results. The main results are csv files in directory `evaluation_measures` named `fiber_measures.csv`, `segmentation_measures.csv`, and `transformation_measures.csv`. Experiment metadata are stored in a json file `my_test_exp.json`.  
