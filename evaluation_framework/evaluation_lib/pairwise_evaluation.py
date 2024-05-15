@@ -10,6 +10,7 @@ import nibabel as nib
 from evaluation_lib import transformation_utils
 from evaluation_lib import fiber_measures
 from evaluation_lib import segmentation_measures
+from evaluation_lib import transformation_measures
 
 ### Constants for output directories
 
@@ -91,6 +92,7 @@ def pairwise_evaluation_ants(
 
         compute_fiber_metrics(out_inverse_warp_filename, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers, num_repeats, specified_fibers)
         compute_segmentation_metrics(out_forward_warp_filename, source_segmentation_path, target_segmentation_path, output_path, specified_segmentations)
+        compute_transformation_metrics(out_forward_warp_filename, out_inverse_warp_filename, output_path)
 
 def compute_fiber_metrics(
     diffeo_path: Path, source_fiber_path: Path, target_fiber_path: Path, output_path: Path, 
@@ -205,4 +207,31 @@ def compute_segmentation_metrics(diffeo_path: Path, source_segmentation_path: Pa
     # Write segmentation measures csv
     f = open(str(segmentation_measures_csv_path), 'w')
     f.write(segmentation_measures_csv)
+    f.close()
+
+def compute_transformation_metrics(forward_diffeo_path: Path, inverse_diffeo_path: Path, output_path: Path) -> None:
+
+    """
+    Computes transformation based metrics (currently percentage of voxels with negative jacobian determinant) and outputs a csv to the specified base output path
+    
+    :param forward_diffeo_path: the forward diffeo used in mrtrix format
+    :param inverse_diffeo_path: the forward diffeo used in mrtrix format
+    :param output_path: base directory to write output
+    """
+
+    # Measures output path 
+    evaluation_measures_output_path = output_path / EVALUATION_MEASURES_DIR 
+    
+    if not evaluation_measures_output_path.exists():
+        os.mkdir(str(evaluation_measures_output_path))
+
+    transformation_measures_csv_path = evaluation_measures_output_path / 'transformation_measures.csv'
+    transfromation_measures_csv = 'Transformation, Percent Negative Jacobian Determinant\n'
+
+    transfromation_measures_csv += f'forward_diffeo, {transformation_measures.percent_negative_jacobian_determinant(forward_diffeo_path)}\n'
+    transfromation_measures_csv += f'inverse_diffeo, {transformation_measures.percent_negative_jacobian_determinant(inverse_diffeo_path)}\n'
+    
+    # Write segmentation measures csv
+    f = open(str(transformation_measures_csv_path), 'w')
+    f.write(transfromation_measures_csv)
     f.close()
