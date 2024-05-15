@@ -62,12 +62,10 @@ Now you can run the driver `pairwise_evaluation_ants.py`
 
 ```sh
 python pairwise_evaluation_ants.py  
-       /path/to/data/source.nii.gz  
-       /path/to/source/tractseg_output/TOM_trackings    
-       /path/to/source/tractseg_output/bundle_segmentations
-       /path/to/data/target.nii.gz
-       /path/to/target/tractseg_output/TOM_trackings
-       /path/to/target/tractseg_output/bundle_segmentations
+       /path/to/data/source_fa.nii.gz  
+       /path/to/source/tractseg_output/TOM_trackings /path/to/source/tractseg_output/bundle_segmentations  
+       /path/to/data/target_fa.nii.gz
+       /path/to/target/tractseg_output/TOM_trackings /path/to/target/tractseg_output/bundle_segmentations  
        /path/to/output_base_directory my_test_exp
 ```
 
