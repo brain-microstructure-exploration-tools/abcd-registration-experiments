@@ -23,7 +23,7 @@ While several current driver scripts serve to test the methods starting from dwi
 
 dti, fa images, brain masks, fod images, and tractography.
 
-# Run an example -- ants FA registration and evaluation via fiber tract distance
+# Run an example -- ants FA registration and evaluation
 
 ## Data preprocessing
 
@@ -56,11 +56,17 @@ To proceed with the example, we assume the preprocessing has been performed for 
 
 - a folder `/path/to/data/` with `source_fa.nii.gz` and `target_fa.nii.gz` fa images for the source and target subjects
 - folders for each subject's tractography `/path/to/source/tractseg_output/TOM_trackings` and `/path/to/target/tractseg_output/TOM_trackings`
+- folders for each subject's white matter tract binary segmentation masks `/path/to/source/tractseg_output/bundle_segmentations` and `/path/to/target/tractseg_output/bundle_segmentations`
 
 Now you can run the driver `pairwise_evaluation_ants.py`
 
 ```sh
-python pairwise_evaluation_ants.py /path/to/data/source.nii.gz /path/to/source/tractseg_output/TOM_trackings /path/to/data/target.nii.gz /path/to/target/tractseg_output/TOM_trackings /path/to/output_base_directory my_test_exp
+python pairwise_evaluation_ants.py  
+       /path/to/data/source_fa.nii.gz  
+       /path/to/source/tractseg_output/TOM_trackings /path/to/source/tractseg_output/bundle_segmentations  
+       /path/to/data/target_fa.nii.gz
+       /path/to/target/tractseg_output/TOM_trackings /path/to/target/tractseg_output/bundle_segmentations  
+       /path/to/output_base_directory my_test_exp
 ```
 
-This will create a new directory `/path/to/output_base_directory/my_test_exp/` to store evalutation results. The main result is a csv file `fiber_distances.csv` containing all the fiber tract distances between source and target after registration. Experiment metadata are stored in a json file `my_test_exp.json`.  
+This will create a new directory `/path/to/output_base_directory/my_test_exp/` to store evalutation results. The main results are csv files in directory `evaluation_measures` named `fiber_measures.csv`, `segmentation_measures.csv`, and `transformation_measures.csv`. Experiment metadata are stored in a json file `my_test_exp.json`.  

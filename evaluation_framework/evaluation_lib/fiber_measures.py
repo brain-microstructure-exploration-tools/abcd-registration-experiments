@@ -1,8 +1,6 @@
-import os
 from pathlib import Path
 
 import numpy as np
-import vtk
 
 from evaluation_lib import fiber_tract_io
 
