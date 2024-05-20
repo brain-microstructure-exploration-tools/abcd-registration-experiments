@@ -8,6 +8,9 @@ import nibabel as nib
 import ants
 import h5py
 
+import voxelmorph as vxm
+import tensorflow as tf
+
 def convert_ants_transform_to_mrtrix_transform(target_image: Path, ants_transform: Path) -> nib.nifti1.Nifti1Image:
     """
     Converts an ants transformation (which is a displacement field) to an mrtrix format (which is a deformation field)
@@ -48,7 +51,52 @@ def convert_ants_transform_to_mrtrix_transform(target_image: Path, ants_transfor
 
         array_im = nib.load(corrected_warp)
         return nib.Nifti1Image(array_im.get_fdata(), array_im.affine)
+
+def convert_voxelmorph_transform_to_mrtrix_transform(target_image: Path, voxelmorph_transform: Path, gpu: bool=False) -> nib.nifti1.Nifti1Image:
+    """
+    Converts an voxelmorph transformation (which is a displacement field) to an mrtrix format (which is a deformation field)
+    https://community.mrtrix.org/t/registration-using-transformations-generated-from-other-packages/2259
+
+    :param target_image: path to a target image defining the coordinate space and voxel grid
+    :param voxelmorph_transform: path to a voxelmorph transform to be converted
+    :return: a deformation field as a nifti image
+    """
     
+    # Setup device 0 = cpu, 1 = gpu
+    device, nb_devices = vxm.tf.utils.setup_device(int(gpu))
+
+    with TemporaryDirectory() as temp_dir:
+
+        identity_warp = '%s/identity_warp[].nii.gz' %(str(temp_dir))
+
+        # Create identity warp
+        subprocess.run(['warpinit', str(target_image), identity_warp, '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Transform the idenity warp using voxelmorph
+        voxelmorph_target_im = vxm.py.utils.load_volfile(str(target_image), add_batch_axis=True, add_feat_axis=True)
+        diffeo, diffeo_affine = vxm.py.utils.load_volfile(str(voxelmorph_transform), add_batch_axis=True, ret_affine=True)
+
+        image_dim = len(voxelmorph_target_im.shape)-2
+
+        # Transform each dimensions
+        for d in range(0, image_dim):
+
+            cur_identity_warp = '%s/identity_warp%d.nii.gz' %(str(temp_dir), d)
+            identity_im = vxm.py.utils.load_volfile(cur_identity_warp, add_batch_axis=True, add_feat_axis=True)
+            
+            with tf.device(device):
+                cur_warped_image = vxm.networks.Transform(identity_im.shape[1:-1], interp_method='linear', nb_feats=identity_im.shape[-1]).predict([identity_im, diffeo])
+
+            out_image_filename = '%s/mrtrix_warp%d.nii.gz' %(str(temp_dir), d)
+            vxm.py.utils.save_volfile(cur_warped_image.squeeze(), out_image_filename, diffeo_affine)
+
+        corrected_warp = '%s/corrected_warp.nii.gz' %(str(temp_dir))
+        warp_filename = '%s/mrtrix_warp[].nii.gz' %(str(temp_dir))
+        subprocess.run(['warpcorrect', warp_filename, corrected_warp, '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        array_im = nib.load(corrected_warp)
+        return nib.Nifti1Image(array_im.get_fdata(), array_im.affine)
+
 def warp_fiber_tract(in_fiber_tract_path: Path, mrtrix_warp_path: Path, out_fiber_tract_path: Path) -> None:
     """
     Warp a tck fiber tract using mrtrix
