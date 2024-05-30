@@ -136,6 +136,47 @@ def pairwise_evaluation_voxelmorph(
         compute_segmentation_metrics(out_forward_warp_filename, source_segmentation_path, target_segmentation_path, output_path, specified_segmentations)
         compute_transformation_metrics(out_forward_warp_filename, out_inverse_warp_filename, output_path)
 
+def pairwise_evaluation_dtitk(forward_diffeo_path: Path, inverse_diffeo_path: Path, 
+    source_fiber_path: Path, source_segmentation_path: Path,
+    target_fiber_path: Path, target_segmentation_path: Path,
+    output_path: Path, percent_sample_fibers: float=0.1, num_repeats: int=1, specified_fibers: list=[], specified_segmentations: list=[]
+) -> None:
+    """
+    Performs a pairwise registration evalutation given the output of dtitk registration and directories for source and target fiber tracts and segmentations
+    
+    :param forward_diffeo_path: the forward diffeo from voxelmorph registration
+    :param inverse_diffeo_path: the inverse diffeo from voxelmorph registration (currently not used/implemented)
+    :param source_fiber_path: a directory with source fibers in tck format
+    :param source_segmentation_path: a directory with source binary segmentations in nii.gz format
+    :param target_fiber_path: a directory with target fibers in tck format which correspond by name to source fibers
+    :param target_segmentation_path: a directory with target binary segmentations in nii.gz format
+    :param output_path: base directory to write output
+    :param percent_sample_fibers: a percentage of fiber streamlines to sample when computing fiber tract distance
+    :param num_repeats: the number of times to compute fiber tract distance with different random sampling
+    :param specified_fibers: a list of strings specifying which fibers to use
+    :param specified_segmentations: a list of strings specifying which segmentations to use
+    """
+
+    ### Convert the transformations to mrtrix format ###
+
+    with TemporaryDirectory() as temp_dir:    
+
+        # Convert voxelmorph transformation to mrtrix
+        #mrtrix_forward_warp = transformation_utils.convert_voxelmorph_transform_to_mrtrix_transform(target_fa_path, forward_diffeo_path, gpu=gpu)
+        out_forward_warp_filename = Path(temp_dir) / 'mrtrix_forward_diffeo.nii.gz'
+        subprocess.run(['warpconvert',forward_diffeo_path, 'displacement2deformation', out_forward_warp_filename, '-force'])
+        #nib.save(mrtrix_forward_warp, out_forward_warp_filename)
+        
+        ## Compute the inverse mrtrix warp using the command warpinvert (currently do not know how to obtain inverse from voxelmorph)
+        out_inverse_warp_filename = Path(temp_dir) / 'mrtrix_inverse_diffeo.nii.gz'
+        subprocess.run(['warpinvert', str(out_forward_warp_filename), out_inverse_warp_filename, '-force'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        ### Compute metrics ###
+
+        compute_fiber_metrics(out_inverse_warp_filename, source_fiber_path, target_fiber_path, output_path, percent_sample_fibers, num_repeats, specified_fibers)
+        compute_segmentation_metrics(out_forward_warp_filename, source_segmentation_path, target_segmentation_path, output_path, specified_segmentations)
+        compute_transformation_metrics(out_forward_warp_filename, out_inverse_warp_filename, output_path)
+
 def compute_fiber_metrics(
     diffeo_path: Path, source_fiber_path: Path, target_fiber_path: Path, output_path: Path, 
     percent_sample_fibers: float, num_repeats: int, specified_fibers: list=[]
