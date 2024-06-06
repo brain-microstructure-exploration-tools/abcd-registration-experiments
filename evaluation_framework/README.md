@@ -12,10 +12,14 @@ Python version 3.10.14 and the following packages:
 - [nibabel](https://nipy.org/nibabel/)
 - [numpy](https://numpy.org/)
 - [vtk](https://pypi.org/project/vtk/)
+- [voxelmorph](https://github.com/voxelmorph/voxelmorph)
+- [tensorflow](https://www.tensorflow.org/) Tested with version 2.10.0
 
 Addtional sofware:
 - [mrtrix](https://www.mrtrix.org/) Tested with version 3.0.3 installed via conda.
 - [TractSeg](https://github.com/MIC-DKFZ/TractSeg)
+- [DTI-TK](https://dti-tk.sourceforge.net/pmwiki/pmwiki.php) Tested with version 2.3.1.
+- [convert3D](http://www.itksnap.org/pmwiki/pmwiki.php?n=Convert3D.Convert3D) Tested with nightly version 2024-03-12. 
 
 # Data preparation
 
