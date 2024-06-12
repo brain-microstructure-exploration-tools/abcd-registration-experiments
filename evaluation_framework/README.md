@@ -31,23 +31,13 @@ dti, fa images, brain masks, fod images, and tractography.
 
 ## Data preprocessing
 
-This example requires several preprocessing steps. We assume the user is starting from dwi images (with corresponding bval/bvec). Preprocessing consists of brain brasking, dti reconstruction, and tractography.
-
-### Brain masking
-
-### DTI reconstruction
+This example requires several preprocessing steps. Starting from dwi images (with corresponding bval/bvec), use the pipeline in [abcd-noddi-tbss-experiments](https://github.com/brain-microstructure-exploration-tools/abcd-noddi-tbss-experiments) to generate brain masks, dti, and FODs.
 
 ### Subject-specific tractography
 
-For this example, we will be using subject-specific tractography to quantify registration accuracy. This is done by applying the registration deformation field to the source fiber tracts and measuring the distance to the target fiber tracts. This requires independent tractography estimation in each indiviudal subject's space. In this step, we will estimate subject-specific full brain tractography.
+We will be using subject-specific tractography to quantify registration accuracy. This is done by applying the registration deformation field to the source fiber tracts and measuring the distance to the target fiber tracts. This requires independent tractography estimation in each indiviudal subject's space.
 
-#### Computation of fiber orientation distribution (fod) images.
-
-Fod images can be estimated given dwi with mrtrix commmand [dti2fod](https://mrtrix.readthedocs.io/en/dev/reference/commands/dwi2fod.html)
-
-#### Estimating tractography
-
-Once a fod image has been computed, full brain tractography can be estimated using the script `single_subject_tractography.py`.
+The pipeline in [abcd-noddi-tbss-experiments](https://github.com/brain-microstructure-exploration-tools/abcd-noddi-tbss-experiments) has a tractography step whose output can be used. If instead we want to run subject-specific full brain tractography for a single subject, then we also have the script `single_subject_tractography.py`.
 
 ```sh 
 python single_subject_tractograph.py /path/to/fod_image.nii.gz /path/to/output_directory
