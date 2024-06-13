@@ -66,10 +66,25 @@ python pairwise_evaluation_ants.py
 This will create a new directory `/path/to/output_base_directory/my_test_exp/` to store evalutation results. The main results are csv files in directory `evaluation_measures` named `fiber_measures.csv`, `segmentation_measures.csv`, and `transformation_measures.csv`. Experiment metadata are stored in a json file `my_test_exp.json`.  
 
 
-# Voxelmorph evaluation example
+# Voxelmorph evaluation
 
-Voxelmorph is tricky because it requires a certain version of tensorflow and that version of tensorflow requires a certain version of CUDA to run things on GPU. For this we recommend setting up the nvidia container toolkit on your system and using the Docker image provided here.
+Download the model weights:
+```
+wget https://surfer.nmr.mgh.harvard.edu/ftp/data/voxelmorph/models/vxm_dense_brain_T1_3D_mse.h5
+```
 
+Voxelmorph is tricky because it requires a certain version of tensorflow and that version of tensorflow requires a certain version of CUDA to run things on GPU. We ned to run voxelmorph on GPU in order to fairly evaluate the runtime when it's used as intended. Here we recommend setting up the nvidia container toolkit on your system and using the Docker image that we include.
+
+From the present directory, and having install docker and nvidia container toolkit, run the following to build the image:
 ```
-# to do ...
+docker build -f voxelmorph.dockerfile -t voxelmorph-image .
 ```
+
+Test that the image works:
+```
+docker run --gpus all --rm --name voxelmorph-container -v $(pwd):/workspace -u $(id -u):$(id -g) voxelmorph-image \
+    python3.9 pairwise_evaluation_voxelmorph.py --help
+```
+A few harmless warnings and a usage text hopefully show up.
+
+In order to use `pairwise_evaluation_voxelmorph.py`, run the above docker command with `python3.9 pairwise_evaluation_voxelmorph.py --help` being replaced by your desired way of calling `pairwise_evaluation_voxelmorph.py`.

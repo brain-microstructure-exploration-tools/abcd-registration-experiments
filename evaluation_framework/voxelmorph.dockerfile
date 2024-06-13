@@ -12,11 +12,19 @@ RUN apt-get update && apt-get install -y \
 # python 3.8 and we need 3.9 for the evaluation script to work,
 # so we install it again.
 RUN python3.9 -m pip install --upgrade pip
-RUN python3.9 -m pip install tensorflow==2.10 voxelmorph antspyx vtk
+RUN python3.9 -m pip install tensorflow==2.10 voxelmorph==0.2 antspyx==0.4.2 vtk==9.3.0 nibabel==4.0.0
 
-RUN useradd -ms /bin/bash bmet
+RUN apt-get update && apt-get install -y \
+    git g++ python libeigen3-dev zlib1g-dev libqt5opengl5-dev libqt5svg5-dev libgl1-mesa-dev libfftw3-dev libtiff5-dev libpng-dev\
+    && rm -rf /var/lib/apt/lists/*
 
-USER bmet
+RUN git clone https://github.com/MRtrix3/mrtrix3.git && \
+    cd mrtrix3/ && \
+    ./configure && \
+    ./build && \
+    cd ..
+
+ENV PATH="${PATH}:/mrtrix3/bin"
 
 # Set the working directory
 WORKDIR /workspace
