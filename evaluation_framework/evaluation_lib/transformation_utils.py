@@ -1,15 +1,13 @@
-from pathlib import Path
 import subprocess
-import os
-
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import nibabel as nib
 import ants
 import h5py
-
-import voxelmorph as vxm
+import nibabel as nib
 import tensorflow as tf
+import voxelmorph as vxm
+
 
 def convert_ants_transform_to_mrtrix_transform(target_image: Path, ants_transform: Path) -> nib.nifti1.Nifti1Image:
     """

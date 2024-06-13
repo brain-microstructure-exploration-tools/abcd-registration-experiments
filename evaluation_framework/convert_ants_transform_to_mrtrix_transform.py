@@ -1,10 +1,8 @@
 import argparse
-from pathlib import Path
-import subprocess
 import os
+from pathlib import Path
 
 import nibabel as nib
-import ants
 
 from evaluation_lib import transformation_utils
 

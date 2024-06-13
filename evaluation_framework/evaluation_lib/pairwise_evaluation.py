@@ -1,17 +1,12 @@
-from pathlib import Path
 import os
-import glob
 import subprocess
-
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import ants
 import nibabel as nib
 
-from evaluation_lib import transformation_utils
-from evaluation_lib import fiber_measures
-from evaluation_lib import segmentation_measures
-from evaluation_lib import transformation_measures
+from evaluation_lib import (fiber_measures, segmentation_measures,
+                            transformation_measures, transformation_utils)
 
 ### Constants for output directories
 

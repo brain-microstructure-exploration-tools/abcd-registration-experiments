@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import vtk
 
+
 def read_tck_header(in_file: Path) -> dict:
     """
     Read the header from a tck file (code from https://github.com/rordenlab/TractographyFormat/blob/master/PYTHON/read_mrtrix_tracks.py)

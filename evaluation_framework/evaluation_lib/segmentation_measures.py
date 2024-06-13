@@ -1,7 +1,8 @@
 from pathlib import Path
 
-import numpy as np
 import nibabel as nib
+import numpy as np
+
 
 def dice_overlap(source_seg_path: Path, target_seg_path: Path) -> float:
     """

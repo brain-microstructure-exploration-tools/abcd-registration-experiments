@@ -2,24 +2,18 @@
 # Currently there are several temporary files created and not deleted, and hardcoded filenames -- this may be good enough for our own evaluation purposes -- can revisit
 # The source_fiber_dir and target_fiber_dir assume the same number of fiber tracts with the same names in tck format
 
-import sys
 import argparse
-from pathlib import Path
-import subprocess
-import os
-import glob
-import time
 import json
+import os
+import sys
+import time
 from datetime import datetime
+from pathlib import Path
 
 import nibabel as nib
-from dipy.io.image import save_nifti
-import h5py
 
-from evaluation_lib import process_dwi
-from evaluation_lib import dwi_registration
-from evaluation_lib import transformation_utils
-from evaluation_lib import pairwise_evaluation
+from evaluation_lib import (dwi_registration, pairwise_evaluation,
+                            transformation_utils)
 
 parser = argparse.ArgumentParser(description='Performs pairwise fa registration using ANTS and evaluates the accuracy via fiber tract distance and dice overlap')
 

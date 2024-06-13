@@ -3,16 +3,13 @@
 
 import argparse
 import os
-from pathlib import Path
 import subprocess
-
-from dipy.io.image import load_nifti, save_nifti
-from dipy.io.gradients import read_bvals_bvecs
-from dipy.core.gradients import gradient_table
+from pathlib import Path
 
 import dipy.reconst.dti as dti
-
-from dipy.data import get_fnames
+from dipy.core.gradients import gradient_table
+from dipy.io.gradients import read_bvals_bvecs
+from dipy.io.image import load_nifti, save_nifti
 
 # === Parse args ===
 

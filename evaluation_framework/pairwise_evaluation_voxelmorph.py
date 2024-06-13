@@ -1,19 +1,16 @@
 # Evaluates voxelmorph pairwise registration between a source and a target dwi via fa images
 
-import sys
 import argparse
-from pathlib import Path
-import subprocess
-import os
-import glob
-import time
 import json
+import os
+import sys
+import time
 from datetime import datetime
+from pathlib import Path
 
 import nibabel as nib
 
-from evaluation_lib import dwi_registration
-from evaluation_lib import pairwise_evaluation
+from evaluation_lib import dwi_registration, pairwise_evaluation
 
 parser = argparse.ArgumentParser(description='Performs pairwise fa registration using voxelmoprh and evaluates the accuracy via fiber tract distance and dice overlap')
 

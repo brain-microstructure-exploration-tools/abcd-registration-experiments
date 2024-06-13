@@ -1,22 +1,15 @@
-from pathlib import Path
-import os
-import glob
 import math
 import operator
 import subprocess
-
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import ants
-import nibabel as nib
 import h5py
-
+import nibabel as nib
 import numpy as np
-
-import voxelmorph as vxm
 import tensorflow as tf
-
-from evaluation_lib import transformation_utils
+import voxelmorph as vxm
 
 
 class RegistrationMethods:

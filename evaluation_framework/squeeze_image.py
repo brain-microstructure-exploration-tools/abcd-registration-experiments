@@ -1,6 +1,7 @@
-import nibabel as nib
 import argparse
 import os
+
+import nibabel as nib
 import numpy as np
 
 parser = argparse.ArgumentParser(description='Removes axes of length one from a nifti image')
