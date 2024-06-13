@@ -64,3 +64,12 @@ python pairwise_evaluation_ants.py
 ```
 
 This will create a new directory `/path/to/output_base_directory/my_test_exp/` to store evalutation results. The main results are csv files in directory `evaluation_measures` named `fiber_measures.csv`, `segmentation_measures.csv`, and `transformation_measures.csv`. Experiment metadata are stored in a json file `my_test_exp.json`.  
+
+
+# Voxelmorph evaluation example
+
+Voxelmorph is tricky because it requires a certain version of tensorflow and that version of tensorflow requires a certain version of CUDA to run things on GPU. For this we recommend setting up the nvidia container toolkit on your system and using the Docker image provided here.
+
+```
+# to do ...
+```
