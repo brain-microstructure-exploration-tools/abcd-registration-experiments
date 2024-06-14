@@ -68,10 +68,7 @@ This will create a new directory `/path/to/output_base_directory/my_test_exp/` t
 
 # Voxelmorph evaluation
 
-Download the model weights:
-```
-wget https://surfer.nmr.mgh.harvard.edu/ftp/data/voxelmorph/models/vxm_dense_brain_T1_3D_mse.h5
-```
+Download one of the pretrained models [here](https://github.com/voxelmorph/voxelmorph/blob/dev/data/readme.md).
 
 Voxelmorph is tricky because it requires a certain version of tensorflow and that version of tensorflow requires a certain version of CUDA to run things on GPU. We ned to run voxelmorph on GPU in order to fairly evaluate the runtime when it's used as intended. Here we recommend setting up the nvidia container toolkit on your system and using the Docker image that we include.
 
