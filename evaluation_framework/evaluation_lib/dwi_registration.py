@@ -110,6 +110,7 @@ def register_voxelmorph_fa(source_fa: Path, target_fa: Path, model_path: Path, g
 
     # Setup device 0 = cpu, 1 = gpu
     device, nb_devices = vxm.tf.utils.setup_device(int(gpu))
+    print(f"Device to be used is {device} (number of devices = {nb_devices}).")
 
     # Load moving and fixed images
     moving = vxm.py.utils.load_volfile(str(source_fa), add_batch_axis=True, add_feat_axis=True)
