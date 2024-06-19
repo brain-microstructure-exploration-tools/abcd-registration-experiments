@@ -5,20 +5,10 @@ USER root
 
 RUN apt-get update && apt-get install -y \
     libx11-dev libgl1-mesa-glx libglu1-mesa libxt6 libxrender1 libsm6 libice6 libgtk2.0-0 libosmesa6 libgl2ps-dev \
+    git g++ libeigen3-dev zlib1g-dev libqt5opengl5-dev libqt5svg5-dev libgl1-mesa-dev libfftw3-dev libtiff5-dev libpng-dev\
     && rm -rf /var/lib/apt/lists/*
 
 RUN python3.8 -m pip install --upgrade pip
-
-RUN apt-get update && apt-get install -y git
-
-RUN python3.8 -m pip install antspyx vtk nibabel==4.0.0
-
-RUN git clone https://github.com/voxelmorph/voxelmorph.git && \
-    python3.8 -m pip install voxelmorph/
-
-RUN apt-get update && apt-get install -y \
-    g++ libeigen3-dev zlib1g-dev libqt5opengl5-dev libqt5svg5-dev libgl1-mesa-dev libfftw3-dev libtiff5-dev libpng-dev\
-    && rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/MRtrix3/mrtrix3.git && \
     cd mrtrix3/ && \
@@ -27,6 +17,11 @@ RUN git clone https://github.com/MRtrix3/mrtrix3.git && \
     cd ..
 
 ENV PATH="${PATH}:/mrtrix3/bin"
+
+RUN python3.8 -m pip install antspyx vtk nibabel==4.0.0
+
+RUN git clone https://github.com/voxelmorph/voxelmorph.git && \
+    python3.8 -m pip install voxelmorph/
 
 # Set the working directory
 WORKDIR /workspace
