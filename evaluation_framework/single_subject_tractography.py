@@ -1,8 +1,7 @@
 import argparse
 import os
-from pathlib import Path
-import glob
 import subprocess
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description='Performs tractography on a single subject')
 

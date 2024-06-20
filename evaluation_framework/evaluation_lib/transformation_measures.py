@@ -1,9 +1,10 @@
+import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import subprocess
 
-import numpy as np
 import nibabel as nib
+import numpy as np
+
 
 def percent_negative_jacobian_determinant(diffeo_path: Path) -> float:
     '''

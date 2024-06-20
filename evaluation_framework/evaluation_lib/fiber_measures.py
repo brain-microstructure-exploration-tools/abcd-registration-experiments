@@ -4,6 +4,7 @@ import numpy as np
 
 from evaluation_lib import fiber_tract_io
 
+
 def mean_closest_fiber_distance(points_m: np.ndarray, points_t: np.ndarray) -> float:
     """
     This will be the mean closest fiber distance Gerig et al. (2004) as 'the mean of closest distances'

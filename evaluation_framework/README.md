@@ -12,10 +12,14 @@ Python version 3.10.14 and the following packages:
 - [nibabel](https://nipy.org/nibabel/)
 - [numpy](https://numpy.org/)
 - [vtk](https://pypi.org/project/vtk/)
+- [voxelmorph](https://github.com/voxelmorph/voxelmorph)
+- [tensorflow](https://www.tensorflow.org/) Tested with version 2.10.0
 
 Addtional sofware:
 - [mrtrix](https://www.mrtrix.org/) Tested with version 3.0.3 installed via conda.
 - [TractSeg](https://github.com/MIC-DKFZ/TractSeg)
+- [DTI-TK](https://dti-tk.sourceforge.net/pmwiki/pmwiki.php) Tested with version 2.3.1.
+- [convert3D](http://www.itksnap.org/pmwiki/pmwiki.php?n=Convert3D.Convert3D) Tested with nightly version 2024-03-12. 
 
 # Data preparation
 
@@ -27,23 +31,13 @@ dti, fa images, brain masks, fod images, and tractography.
 
 ## Data preprocessing
 
-This example requires several preprocessing steps. We assume the user is starting from dwi images (with corresponding bval/bvec). Preprocessing consists of brain brasking, dti reconstruction, and tractography.
-
-### Brain masking
-
-### DTI reconstruction
+This example requires several preprocessing steps. Starting from dwi images (with corresponding bval/bvec), use the pipeline in [abcd-noddi-tbss-experiments](https://github.com/brain-microstructure-exploration-tools/abcd-noddi-tbss-experiments) to generate brain masks, dti, and FODs.
 
 ### Subject-specific tractography
 
-For this example, we will be using subject-specific tractography to quantify registration accuracy. This is done by applying the registration deformation field to the source fiber tracts and measuring the distance to the target fiber tracts. This requires independent tractography estimation in each indiviudal subject's space. In this step, we will estimate subject-specific full brain tractography.
+We will be using subject-specific tractography to quantify registration accuracy. This is done by applying the registration deformation field to the source fiber tracts and measuring the distance to the target fiber tracts. This requires independent tractography estimation in each indiviudal subject's space.
 
-#### Computation of fiber orientation distribution (fod) images.
-
-Fod images can be estimated given dwi with mrtrix commmand [dti2fod](https://mrtrix.readthedocs.io/en/dev/reference/commands/dwi2fod.html)
-
-#### Estimating tractography
-
-Once a fod image has been computed, full brain tractography can be estimated using the script `single_subject_tractography.py`.
+The pipeline in [abcd-noddi-tbss-experiments](https://github.com/brain-microstructure-exploration-tools/abcd-noddi-tbss-experiments) has a tractography step whose output can be used. If instead we want to run subject-specific full brain tractography for a single subject, then we also have the script `single_subject_tractography.py`.
 
 ```sh 
 python single_subject_tractograph.py /path/to/fod_image.nii.gz /path/to/output_directory
@@ -70,3 +64,30 @@ python pairwise_evaluation_ants.py
 ```
 
 This will create a new directory `/path/to/output_base_directory/my_test_exp/` to store evalutation results. The main results are csv files in directory `evaluation_measures` named `fiber_measures.csv`, `segmentation_measures.csv`, and `transformation_measures.csv`. Experiment metadata are stored in a json file `my_test_exp.json`.  
+
+
+# Voxelmorph evaluation
+
+Download one of the pretrained models [here](https://github.com/voxelmorph/voxelmorph/blob/dev/data/readme.md).
+
+Voxelmorph is tricky because it requires a certain version of tensorflow and that version of tensorflow requires a certain version of CUDA to run things on GPU. We ned to run voxelmorph on GPU in order to fairly evaluate the runtime when it's used as intended. Here we recommend setting up the nvidia container toolkit on your system and using the Docker image that we include.
+
+From the present directory, and having install docker and nvidia container toolkit, run the following to build the image:
+```
+# For python3.9:
+docker build -f voxelmorph.dockerfile -t voxelmorph-image .
+
+# Or for python3.8:
+docker build -f voxelmorph_python3.8.dockerfile -t voxelmorph-image .
+```
+
+Test that the image works:
+```
+docker run --gpus all --rm --name voxelmorph-container -v $(pwd):/workspace -u $(id -u):$(id -g) voxelmorph-image \
+    python3.9 pairwise_evaluation_voxelmorph.py --help
+
+# (Or if you built the python3.8 image replace "python3.9" by "python3.8")
+```
+A few harmless warnings and a usage text hopefully show up.
+
+In order to use `pairwise_evaluation_voxelmorph.py`, run the above docker command with `python3.9 pairwise_evaluation_voxelmorph.py --help` being replaced by your desired way of calling `pairwise_evaluation_voxelmorph.py`.

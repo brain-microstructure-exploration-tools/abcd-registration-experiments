@@ -1,9 +1,10 @@
 import argparse
-from pathlib import Path
 import os
+from pathlib import Path
 from timeit import default_timer as timer
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.ticker import MaxNLocator
 
 from evaluation_lib import fiber_measures

@@ -5,7 +5,6 @@
 import argparse
 import os
 from pathlib import Path
-import subprocess
 
 import ants
 from dipy.io.image import save_nifti

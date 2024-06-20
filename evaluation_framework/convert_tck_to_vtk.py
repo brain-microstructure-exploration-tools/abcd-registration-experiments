@@ -1,8 +1,7 @@
 import argparse
+import glob
 import os
 from pathlib import Path
-import glob
-import subprocess
 
 from evaluation_lib import fiber_tract_io
 
