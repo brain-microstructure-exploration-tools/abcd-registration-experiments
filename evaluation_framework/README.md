@@ -74,13 +74,19 @@ Voxelmorph is tricky because it requires a certain version of tensorflow and tha
 
 From the present directory, and having install docker and nvidia container toolkit, run the following to build the image:
 ```
+# For python3.9:
 docker build -f voxelmorph.dockerfile -t voxelmorph-image .
+
+# Or for python3.8:
+docker build -f voxelmorph_python3.8.dockerfile -t voxelmorph-image .
 ```
 
 Test that the image works:
 ```
 docker run --gpus all --rm --name voxelmorph-container -v $(pwd):/workspace -u $(id -u):$(id -g) voxelmorph-image \
     python3.9 pairwise_evaluation_voxelmorph.py --help
+
+# (Or if you built the python3.8 image replace "python3.9" by "python3.8")
 ```
 A few harmless warnings and a usage text hopefully show up.
 

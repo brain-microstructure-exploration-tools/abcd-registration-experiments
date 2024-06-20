@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 import vtk
@@ -32,7 +33,7 @@ def read_tck_header(in_file: Path) -> dict:
     header["offset"] = int(header["file"].replace(".", ""))
     return header
 
-def read_tck_streamlines(in_file: Path, header: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def read_tck_streamlines(in_file: Path, header: dict) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Read streamlines from a tck file (code from https://github.com/rordenlab/TractographyFormat/blob/master/PYTHON/read_mrtrix_tracks.py)
 
@@ -53,11 +54,11 @@ def read_tck_streamlines(in_file: Path, header: dict) -> tuple[np.ndarray, np.nd
     num_triplets = (os.path.getsize(in_file) - byte_offset) // (dt * 3)
     dt = 'f' + str(dt)
     if datatype.endswith( 'LE' ):
-        dt = '<'+dt    
+        dt = '<'+dt
     if datatype.endswith( 'BE' ):
         dt = '>'+dt
     vtx = np.fromfile(str(in_file), dtype=dt, count=(num_triplets*3), offset=byte_offset)
-    vtx = np.reshape(vtx, (-1,3)) 
+    vtx = np.reshape(vtx, (-1,3))
     #make sure last streamline delimited...
     if not np.isnan(vtx[-2,1]):
         vtx[-1,:] = np.nan
@@ -74,7 +75,7 @@ def read_tck_streamlines(in_file: Path, header: dict) -> tuple[np.ndarray, np.nd
     line_ends = line_ends - 1
     return vtx, line_starts, line_ends
 
-def read_tck(in_file: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def read_tck(in_file: Path) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Reads a tck file (code from https://github.com/rordenlab/TractographyFormat/blob/master/PYTHON/read_mrtrix_tracks.py)
 
@@ -92,7 +93,7 @@ def get_vtk_polydata(vertices: np.ndarray, line_starts: np.ndarray, line_ends: n
     :param vertices: the points of the streamlines
     :param line_starts: line start indices
     :param line_ends: line end indicies
-    :return: vtkPolyData of the tract 
+    :return: vtkPolyData of the tract
     """
     polydata = vtk.vtkPolyData()
 
@@ -135,7 +136,7 @@ def write_vtk(vertices: np.ndarray, line_starts: np.ndarray, line_ends: np.ndarr
     """
 
     polydata = get_vtk_polydata(vertices, line_starts, line_ends)
-    
+
     writer = vtk.vtkPolyDataWriter()
     writer.SetFileName(str(out_filename))
     writer.SetInputData(polydata)
