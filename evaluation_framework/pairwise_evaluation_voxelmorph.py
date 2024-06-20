@@ -131,7 +131,7 @@ if (force_rerun) or (new_exp):
     print("\n  Running voxelmorph registration...")
 
     start_time = time.time()
-    warped_fa, forward_diffeo = dwi_registration.register_voxelmorph_fa(source_path, target_path, model_path, gpu=gpu)
+    warped_fa, forward_diffeo = dwi_registration.register_voxelmorph_fa(source_path, target_path, model_path, use_gpu=gpu)
     duration = time.time() - start_time
 
     experiment_dict["registration_runtime"] = '%0.2f seconds' %(duration)

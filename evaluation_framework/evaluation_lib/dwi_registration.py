@@ -98,19 +98,19 @@ def register_ants_fa(source_fa: Path, target_fa: Path) -> Tuple[nib.nifti1.Nifti
         return warped_im_nib, forward_diffeo, inverse_diffeo
 
 
-def register_voxelmorph_fa(source_fa: Path, target_fa: Path, model_path: Path, gpu: bool=False) -> Tuple[nib.nifti1.Nifti1Image, nib.nifti1.Nifti1Image]:
+def register_voxelmorph_fa(source_fa: Path, target_fa: Path, model_path: Path, use_gpu: bool=False) -> Tuple[nib.nifti1.Nifti1Image, nib.nifti1.Nifti1Image]:
     """
     Performs non-linear registration between a source fa and target fa image using voxelmorph
 
     :param source_fa: the source fa image in .nii.gz format
     :param target_fa: the target fa image in .nii.gz format
-    :param gpu: use the gpu or cpu
+    :param use_gpu: use the gpu or cpu
     :return: (warped source fa image, foward diffeo)
     """
 
-    # Setup device 0 = cpu, 1 = gpu
-    device, nb_devices = vxm.tf.utils.setup_device(int(gpu))
-    print(f"Device to be used is {device} (number of devices = {nb_devices}).")
+    # Setup device; we assume here that the GPU is device ID 0
+    # Passing None as the gpu device id tells it to use CPU
+    device, _ = vxm.tf.utils.setup_device(0 if use_gpu else None)
 
     # Load moving and fixed images
     moving = vxm.py.utils.load_volfile(str(source_fa), add_batch_axis=True, add_feat_axis=True)
