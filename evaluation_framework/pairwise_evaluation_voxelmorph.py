@@ -156,7 +156,7 @@ pairwise_evaluation.pairwise_evaluation_voxelmorph(target_path, forward_diffeo_f
                                             output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats, \
                                             specified_fibers=pairwise_evaluation.TESTING_FIBER_TRACTS, \
                                             specified_segmentations=pairwise_evaluation.TESTING_SEGMENTATIONS,
-                                            gpu=gpu)
+                                            use_gpu=gpu)
 
 print()
 

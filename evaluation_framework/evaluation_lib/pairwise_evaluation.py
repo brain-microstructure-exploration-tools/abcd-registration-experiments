@@ -92,7 +92,7 @@ def pairwise_evaluation_voxelmorph(
     target_fa_path: Path, forward_diffeo_path: Path, inverse_diffeo_path: Path, 
     source_fiber_path: Path, source_segmentation_path: Path,
     target_fiber_path: Path, target_segmentation_path: Path,
-    output_path: Path, percent_sample_fibers: float=0.1, num_repeats: int=1, specified_fibers: list=[], specified_segmentations: list=[], gpu: bool=False
+    output_path: Path, percent_sample_fibers: float=0.1, num_repeats: int=1, specified_fibers: list=[], specified_segmentations: list=[], use_gpu: bool=False
 ) -> None:
     """
     Performs a pairwise registration evalutation given the output of voxelmorph registration and directories for source and target fiber tracts and segmentations
@@ -109,7 +109,7 @@ def pairwise_evaluation_voxelmorph(
     :param num_repeats: the number of times to compute fiber tract distance with different random sampling
     :param specified_fibers: a list of strings specifying which fibers to use
     :param specified_segmentations: a list of strings specifying which segmentations to use
-    :param gpu: use the gpu or cpu
+    :param use_gpu: use the gpu or cpu
     """
 
     ### Convert the transformations to mrtrix format ###
@@ -117,7 +117,7 @@ def pairwise_evaluation_voxelmorph(
     with TemporaryDirectory() as temp_dir:    
 
         # Convert voxelmorph transformation to mrtrix
-        mrtrix_forward_warp = transformation_utils.convert_voxelmorph_transform_to_mrtrix_transform(target_fa_path, forward_diffeo_path, gpu=gpu)
+        mrtrix_forward_warp = transformation_utils.convert_voxelmorph_transform_to_mrtrix_transform(target_fa_path, forward_diffeo_path, use_gpu=use_gpu)
         out_forward_warp_filename = Path(temp_dir) / 'mrtrix_forward_diffeo.nii.gz'
         nib.save(mrtrix_forward_warp, out_forward_warp_filename)
         

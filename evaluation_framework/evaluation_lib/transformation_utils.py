@@ -50,7 +50,7 @@ def convert_ants_transform_to_mrtrix_transform(target_image: Path, ants_transfor
         array_im = nib.load(corrected_warp)
         return nib.Nifti1Image(array_im.get_fdata(), array_im.affine)
 
-def convert_voxelmorph_transform_to_mrtrix_transform(target_image: Path, voxelmorph_transform: Path, gpu: bool=False) -> nib.nifti1.Nifti1Image:
+def convert_voxelmorph_transform_to_mrtrix_transform(target_image: Path, voxelmorph_transform: Path, use_gpu: bool=False) -> nib.nifti1.Nifti1Image:
     """
     Converts an voxelmorph transformation (which is a displacement field) to an mrtrix format (which is a deformation field)
     https://community.mrtrix.org/t/registration-using-transformations-generated-from-other-packages/2259
@@ -60,8 +60,7 @@ def convert_voxelmorph_transform_to_mrtrix_transform(target_image: Path, voxelmo
     :return: a deformation field as a nifti image
     """
     
-    # Setup device 0 = cpu, 1 = gpu
-    device, nb_devices = vxm.tf.utils.setup_device(int(gpu))
+    device, nb_devices = vxm.tf.utils.setup_device(0 if use_gpu else None)
 
     with TemporaryDirectory() as temp_dir:
 
