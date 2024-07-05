@@ -1,10 +1,8 @@
-from dipy.io.image import load_nifti, save_nifti
-from dipy.io.gradients import read_bvals_bvecs
-from dipy.core.gradients import gradient_table
-
 import dipy.reconst.dti as dti
+from dipy.core.gradients import gradient_table
+from dipy.io.gradients import read_bvals_bvecs
+from dipy.io.image import load_nifti
 
-from dipy.data import get_fnames
 
 def reconstruct_dti(dwi_path, bval_path, bvec_path, mask_path):
 

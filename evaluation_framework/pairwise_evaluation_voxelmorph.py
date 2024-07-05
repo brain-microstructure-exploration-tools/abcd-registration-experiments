@@ -1,6 +1,4 @@
-# Evaluates ants pairwise registration between a source and a target dwi via fa images
-# Currently there are several temporary files created and not deleted, and hardcoded filenames -- this may be good enough for our own evaluation purposes -- can revisit
-# The source_fiber_dir and target_fiber_dir assume the same number of fiber tracts with the same names in tck format
+# Evaluates voxelmorph pairwise registration between a source and a target dwi via fa images
 
 import argparse
 import json
@@ -12,14 +10,14 @@ from pathlib import Path
 
 import nibabel as nib
 
-from evaluation_lib import (dwi_registration, pairwise_evaluation,
-                            transformation_utils)
+from evaluation_lib import dwi_registration, pairwise_evaluation
 
-parser = argparse.ArgumentParser(description='Performs pairwise fa registration using ANTS and evaluates the accuracy via fiber tract distance and dice overlap')
+parser = argparse.ArgumentParser(description='Performs pairwise fa registration using voxelmoprh and evaluates the accuracy via fiber tract distance and dice overlap')
 
 # Optional arguments
 parser.add_argument('--percent_sample_fibers', default=0.1, type=float, help='randomly sample a percentage of fiber streamlines')
 parser.add_argument('--num_repeats', default=1, type=int, help='the number of times to repeat the fiber tract distance measurement')
+parser.add_argument('--gpu', action="store_true", help='use the gpu, if not supplied, cpu is used')
 parser.add_argument('--force', action="store_true", help='force the full experiment to be run and overwrite any files already present')
 
 # Positional arguments next
@@ -29,6 +27,7 @@ parser.add_argument('source_segmentation_dir', type=str, help='directory for sou
 parser.add_argument('target', type=str, help='path to a target fa')
 parser.add_argument('target_fiber_dir', type=str, help='directory for target fiber tracts')
 parser.add_argument('target_segmentation_dir', type=str, help='directory for target binary segmentations')
+parser.add_argument('model', type=str, help='path to a trained voxelmorph model')
 parser.add_argument('output_base_dir', type=str, help='path to a base folder for saving output of registration')
 parser.add_argument('exp_name', type=str, help='a name for the experiment')
 
@@ -36,6 +35,7 @@ args = parser.parse_args()
 
 percent_sample_fibers = args.percent_sample_fibers
 num_repeats = args.num_repeats
+gpu = args.gpu
 force_rerun = args.force
 
 source_path = Path(os.path.abspath(args.source))
@@ -47,6 +47,12 @@ target_path = Path(os.path.abspath(args.target))
 target_without_ext = str(target_path)[:str(target_path).rfind(''.join(target_path.suffixes))]
 target_fiber_path = Path(os.path.abspath(args.target_fiber_dir))
 target_segmentation_path = Path(os.path.abspath(args.target_segmentation_dir))
+
+model_path = Path(os.path.abspath(args.model))
+
+# Check the model exists
+if not model_path.exists():
+    raise FileNotFoundError(f"File {model_path} not found")
 
 output_path = Path(os.path.abspath(args.output_base_dir))
 
@@ -108,24 +114,24 @@ if (force_rerun) or (new_exp):
     experiment_dict["target_image"] = str(target_path)
     experiment_dict["target_fibers"] = str(target_fiber_path)
     experiment_dict["target_segmentations"] = str(target_segmentation_path)
-    experiment_dict["registration_method"] = dwi_registration.RegistrationMethods.ANTS
+    experiment_dict["registration_method"] = dwi_registration.RegistrationMethods.VOXELMORPH
     experiment_dict["percent_sample_fibers"] = str(percent_sample_fibers)
     experiment_dict["num_repeats"] = str(num_repeats)
 
 # Deformation field files
-forward_diffeo_filename = registration_path / 'diffeo_Composite.h5'
-inverse_diffeo_filename = registration_path / 'diffeo_InverseComposite.h5'
+forward_diffeo_filename = registration_path / 'diffeo_forward.nii.gz'
+inverse_diffeo_filename = registration_path / 'diffeo_inverse.nii.gz'
 
 # If this is a continued experiment where the user is NOT reruning, check to make sure the deformation fields exists. If they don't exist let the user know a force is required
 if (not forward_diffeo_filename.exists() or not inverse_diffeo_filename.exists()) and (not new_exp and not force_rerun):
-    sys.exit("Missing ants deformation fields. The full experiment must be rerun with --force.")
+    sys.exit("Missing voxelmorph deformation fields. The full experiment must be rerun with --force.")
 
 if (force_rerun) or (new_exp):
 
-    print("\n  Running ants registration...")
+    print("\n  Running voxelmorph registration...")
 
     start_time = time.time()
-    warped_fa, forward_diffeo, inverse_diffeo = dwi_registration.register_ants_fa(source_path, target_path)
+    warped_fa, forward_diffeo = dwi_registration.register_voxelmorph_fa(source_path, target_path, model_path, use_gpu=gpu)
     duration = time.time() - start_time
 
     experiment_dict["registration_runtime"] = '%0.2f seconds' %(duration)
@@ -135,21 +141,22 @@ if (force_rerun) or (new_exp):
     out_image_path = registration_path / warped_fa_filename
     nib.save(warped_fa, str(out_image_path))
 
-    # Write hd5 transforms
-    transformation_utils.write_hd5_transform(forward_diffeo, forward_diffeo_filename)
-    transformation_utils.write_hd5_transform(inverse_diffeo, inverse_diffeo_filename)
+    # Write the forward diffeo (currently do not know how to get the inverse from voxelmorph
+    nib.save(forward_diffeo, str(forward_diffeo_filename))
 
 else:
 
-    print("\n  Using previously computed ants registration results...")
+    print("\n  Using previously computed voxelmorph registration results...")
 
-print("\n  Running ants evalutation...")
+print("\n  Running voxelmorph evalutation...")
 
-pairwise_evaluation.pairwise_evaluation_ants(target_path, forward_diffeo_filename, inverse_diffeo_filename, \
+
+pairwise_evaluation.pairwise_evaluation_voxelmorph(target_path, forward_diffeo_filename, inverse_diffeo_filename, \
                                             source_fiber_path, source_segmentation_path, target_fiber_path, target_segmentation_path, \
                                             output_path, percent_sample_fibers=percent_sample_fibers, num_repeats=num_repeats, \
                                             specified_fibers=pairwise_evaluation.TESTING_FIBER_TRACTS, \
-                                            specified_segmentations=pairwise_evaluation.TESTING_SEGMENTATIONS)
+                                            specified_segmentations=pairwise_evaluation.TESTING_SEGMENTATIONS,
+                                            use_gpu=gpu)
 
 print()
 
