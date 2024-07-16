@@ -91,3 +91,9 @@ docker run --gpus all --rm --name voxelmorph-container -v $(pwd):/workspace -u $
 A few harmless warnings and a usage text hopefully show up.
 
 In order to use `pairwise_evaluation_voxelmorph.py`, run the above docker command with `python3.9 pairwise_evaluation_voxelmorph.py --help` being replaced by your desired way of calling `pairwise_evaluation_voxelmorph.py`.
+
+# DTI-TK evaluation
+
+- Download and extract DTI-TK and add the `bin/` and `scripts/` subdirectories to the `PATH` environment variable
+- Also set the environment variable `DTITK_ROOT` to be the path to the extracted DTI-TK (the parent directory of `bin/` and `scripts`)
+- Download and extract convert3d and add the `bin`/ subdirectory to the `PATH`
