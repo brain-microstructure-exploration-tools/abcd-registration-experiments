@@ -9,8 +9,6 @@ import ants
 import h5py
 import nibabel as nib
 import numpy as np
-import tensorflow as tf
-import voxelmorph as vxm
 
 
 class RegistrationMethods:
@@ -107,6 +105,9 @@ def register_voxelmorph_fa(source_fa: Path, target_fa: Path, model_path: Path, u
     :param use_gpu: use the gpu or cpu
     :return: (warped source fa image, foward diffeo)
     """
+
+    import tensorflow as tf
+    import voxelmorph as vxm
 
     # Setup device; we assume here that the GPU is device ID 0
     # Passing None as the gpu device id tells it to use CPU

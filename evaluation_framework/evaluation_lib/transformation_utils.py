@@ -5,8 +5,6 @@ from tempfile import TemporaryDirectory
 import ants
 import h5py
 import nibabel as nib
-import tensorflow as tf
-import voxelmorph as vxm
 
 
 def convert_ants_transform_to_mrtrix_transform(target_image: Path, ants_transform: Path) -> nib.nifti1.Nifti1Image:
@@ -59,6 +57,9 @@ def convert_voxelmorph_transform_to_mrtrix_transform(target_image: Path, voxelmo
     :param voxelmorph_transform: path to a voxelmorph transform to be converted
     :return: a deformation field as a nifti image
     """
+
+    import tensorflow as tf
+    import voxelmorph as vxm
     
     device, nb_devices = vxm.tf.utils.setup_device(0 if use_gpu else None)
 
