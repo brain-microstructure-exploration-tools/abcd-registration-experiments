@@ -130,7 +130,7 @@ if (force_rerun) or (new_exp):
     print("\n  Running dtitk registration...")
 
     start_time = time.time()
-    forward_diffeo = dwi_registration.register_dtitk_dti(source_path, target_path, target_mask_path, diffusivity_scale=1500)
+    forward_diffeo = dwi_registration.register_dtitk_dti(source_path, target_path, target_mask_path, diffusivity_scale=1875)
     duration = time.time() - start_time
 
     experiment_dict["registration_runtime"] = '%0.2f seconds' %(duration)

@@ -11,7 +11,7 @@ from pathlib import Path
 parser = argparse.ArgumentParser(description='performs non-linear registration between a source and target dwi')
 
 # Optional arguments
-parser.add_argument('--scale', default=1500, type=int, help='scaling to correct for diffusivity units')
+parser.add_argument('--scale', default=1875, type=int, help='scaling to correct for diffusivity units')
 parser.add_argument('--iters', default=6, type=int, help='number of iterations for diffeomorphic registration')
 parser.add_argument('--tol', default=0.002, type=float, help='convergence critera for diffeomorphic registration')
 
@@ -69,7 +69,7 @@ source_out_filename = '%s/%s' %(str(output_path), str(source_path.stem))
 target_out_filename = '%s/%s' %(str(output_path), str(target_path.stem))
 
 # First we have to scale the diffusivity values to make the units compatible with dti-tk (mean diffusivity for CSF around 3)
-# For now I have checked a couple of subjects and found MD to be around 0.002 --> so I set the scale to 1500 as default
+# For now I have checked a couple of subjects and found MD to be around 0.0016 --> so I set the scale to 1875 as default
 # This should be revisited for the population and for different scanners (possible not hardcoded if we have tissue seg)
 subprocess.run(['TVtool', '-in', source_path, '-scale', str(diffusivity_scale), '-out', source_out_filename], stdout=subprocess.DEVNULL)
 subprocess.run(['TVtool', '-in', target_path, '-scale', str(diffusivity_scale), '-out', target_out_filename], stdout=subprocess.DEVNULL)
