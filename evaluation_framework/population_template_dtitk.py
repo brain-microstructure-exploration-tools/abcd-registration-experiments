@@ -84,7 +84,7 @@ for i in range(0, len(dwi_list)):
   save_nifti(cur_out_mask_filename, cur_mask_data, cur_mask_affine, cur_mask_img.header)
   
   # Preprocess the dti for dti-tk
-  subprocess.run(['TVtool', '-in', cur_out_dti_filename, '-scale', '1500', '-out', cur_out_dti_filename], stdout=subprocess.DEVNULL)
+  subprocess.run(['TVtool', '-in', cur_out_dti_filename, '-scale', '1875', '-out', cur_out_dti_filename], stdout=subprocess.DEVNULL)
   subprocess.run(['TVAdjustVoxelspace', '-in', cur_out_dti_filename, '-origin', '0', '0', '0'], stdout=subprocess.DEVNULL)
   subprocess.run(['SVAdjustVoxelspace', '-in', cur_out_mask_filename, '-origin', '0', '0', '0'], stdout=subprocess.DEVNULL)
   subprocess.run(['TVResample', '-in', cur_out_dti_filename, '-align', 'origin', '-size', '128', '128', '128', '-vsize', '1.86', '1.86', '1.86'], stdout=subprocess.DEVNULL)

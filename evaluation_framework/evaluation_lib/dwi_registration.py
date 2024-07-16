@@ -168,7 +168,7 @@ def register_voxelmorph_fa(source_fa: Path, target_fa: Path, model_path: Path, u
         return warped_im_nib, diffeo_im_nib
 
 
-def register_dtitk_dti(source_path: Path, target_path: Path, target_mask_path: Path, diffusivity_scale: int=1500) -> nib.nifti1.Nifti1Image:
+def register_dtitk_dti(source_path: Path, target_path: Path, target_mask_path: Path, diffusivity_scale: int=1875) -> nib.nifti1.Nifti1Image:
     """
     Performs non-linear registration between a source dti and target dti image using dtitk
 
@@ -230,7 +230,7 @@ def register_dtitk_dti(source_path: Path, target_path: Path, target_mask_path: P
         nib.save(target_mask_pad_nib, target_out_mask_filename)
 
         # First we have to scale the diffusivity values to make the units compatible with dti-tk (mean diffusivity for CSF around 3)
-        # For now I have checked a couple of subjects and found MD to be around 0.002 --> so I set the scale to 1500 as default
+        # For now I have checked a couple of subjects and found MD to be around 0.0016 --> so I set the scale to 1875 as default
         # This should be revisited for the population and for different scanners (possible not hardcoded if we have tissue seg)
         subprocess.run(['TVtool', '-in', source_out_dti_filename, '-scale', str(diffusivity_scale), '-out', source_out_dti_filename], stdout=subprocess.DEVNULL)
         subprocess.run(['TVtool', '-in', target_out_dti_filename, '-scale', str(diffusivity_scale), '-out', target_out_dti_filename], stdout=subprocess.DEVNULL)
