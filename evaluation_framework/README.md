@@ -97,3 +97,5 @@ In order to use `pairwise_evaluation_voxelmorph.py`, run the above docker comman
 - Download and extract DTI-TK and add the `bin/` and `scripts/` subdirectories to the `PATH` environment variable
 - Also set the environment variable `DTITK_ROOT` to be the path to the extracted DTI-TK (the parent directory of `bin/` and `scripts`)
 - Download and extract convert3d and add the `bin`/ subdirectory to the `PATH`
+
+While this runs, it doesn't appear to be working well. Results look oddly deformed and not quite aligned. It is not clear whether it's an issue with DTI-TK or an issue with the way we are using it here.
